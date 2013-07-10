@@ -1,6 +1,6 @@
 # remove_collector.rb
 #
-# This is a ruby script to handle the creation and installation of LogicMonitor collectors.
+# This is a ruby script to handle the deletion and uninstallation of LogicMonitor collectors.
 #
 # Requires:
 # Ruby
@@ -15,8 +15,6 @@
 # RightScale Marketplace
 #
 # Authors: Perry Yang, Ethan Culler-Mayeno
-#
-# Note: This script assumes that the name for the collector is unique and static. Recommend using the 
 #
 
 require 'json'

@@ -16,8 +16,6 @@
 #
 # Authors: Perry Yang, Ethan Culler-Mayeno
 #
-# Note: This script assumes that the name for the collector is unique and static. Recommend using the 
-#
 
 require 'json'
 require 'open-uri'
