@@ -27,7 +27,7 @@ opt_error = false
 begin
   @options = {}
   OptionParser.new do |opts|
-    opts.banner = "Usage: add_collector.rb -c <company> -u <user> -p <password> -n <collector-name> [-d]"
+    opts.banner = "Usage: add_collector.rb -c <company> -u <user> -p <password> [-d]"
 
     opts.on("-d", "--debug", "Turn on debug print statements") do |v|
       @options[:debug] = v
