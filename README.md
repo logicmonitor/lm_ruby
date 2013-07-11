@@ -1,2 +1,2 @@
-lm_rightscripts
+lm_automation
 ===============
