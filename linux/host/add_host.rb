@@ -289,6 +289,12 @@ def rpc(action, args={})
   return nil
 end
 
+###################################################################
+#                                                                 #
+#       Begin running part of the script                          #
+#                                                                 #
+###################################################################
+
 opt_error = false
 begin
   @options = {}
