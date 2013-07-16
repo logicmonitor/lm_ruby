@@ -17,73 +17,13 @@
 # Authors: Perry Yang, Ethan Culler-Mayeno
 #
 
+
+# require 'rubygems'   #needed for Ruby 1.8.7 support
 require 'json'
 require 'open-uri'
 require 'net/http'
 require 'net/https'
 require 'optparse'   #not needed for RightScript  
-
-opt_error = false
-begin
-  @options = {}
-  OptionParser.new do |opts|
-    opts.banner = "Usage: add_collector.rb -c <company> -u <user> -p <password> [-d]"
-
-    opts.on("-d", "--debug", "Turn on debug print statements") do |v|
-      @options[:debug] = v
-    end
-
-    opts.on("-c", "--company COMPANY", "LogicMonitor Account") do |c|
-      @options[:company] = c
-    end
-
-    opts.on("-u", "--user USERNAME", "LogicMonitor user name") do |u|
-      @options[:user] = u
-    end
-
-    opts.on("-p", "--password PASSWORD", "LogicMonitor password") do |p|
-      @options[:password] = p
-    end
-  end.parse!
-rescue OptionParser::MissingArgument => ma
-   puts ma.inspect
-   opt_error = true
-end  
-
-begin
-  raise OptionParser::MissingArgument if @options[:company].nil?
-rescue  OptionParser::MissingArgument => ma
-  puts "Missing option: -c <company>"
-   opt_error = true
-end  
-
-begin
-  raise OptionParser::MissingArgument if @options[:user].nil?
-rescue  OptionParser::MissingArgument => ma
-  puts "Missing option: -u <username>"
-  opt_error = true
-end  
-
-begin
-  raise OptionParser::MissingArgument if @options[:password].nil?
-rescue  OptionParser::MissingArgument => ma
-  puts "Missing option: -p <password>"
-  opt_error = true
-end  
-
-if opt_error
-  exit 1
-end
-
-#
-# RightScale Input handling here.
-#
-@company = @options[:company]
-@user = @options[:user]
-@password = @options[:password]
-@name = `hostname`.strip
-@debug = @options[:debug]
-@install_dir = "/usr/local/logicmonitor"
 
 #runs the utility functions and controls the flow of the program
 def run(name, install_dir)
@@ -293,6 +233,65 @@ def rpc(action, args={})
   return nil
 end
 
+
+opt_error = false
+begin
+  @options = {}
+  OptionParser.new do |opts|
+    opts.banner = "Usage: add_collector.rb -c <company> -u <user> -p <password> [-d]"
+
+    opts.on("-d", "--debug", "Turn on debug print statements") do |v|
+      @options[:debug] = v
+    end
+
+    opts.on("-c", "--company COMPANY", "LogicMonitor Account") do |c|
+      @options[:company] = c
+    end
+
+    opts.on("-u", "--user USERNAME", "LogicMonitor user name") do |u|
+      @options[:user] = u
+    end
+
+    opts.on("-p", "--password PASSWORD", "LogicMonitor password") do |p|
+      @options[:password] = p
+    end
+  end.parse!
+rescue OptionParser::MissingArgument => ma
+   puts ma.inspect
+   opt_error = true
+end  
+
+begin
+  raise OptionParser::MissingArgument if @options[:company].nil?
+rescue  OptionParser::MissingArgument => ma
+  puts "Missing option: -c <company>"
+   opt_error = true
+end  
+
+begin
+  raise OptionParser::MissingArgument if @options[:user].nil?
+rescue  OptionParser::MissingArgument => ma
+  puts "Missing option: -u <username>"
+  opt_error = true
+end  
+
+begin
+  raise OptionParser::MissingArgument if @options[:password].nil?
+rescue  OptionParser::MissingArgument => ma
+  puts "Missing option: -p <password>"
+  opt_error = true
+end  
+
+if opt_error
+  exit 1
+end
+
+@company = @options[:company]
+@user = @options[:user]
+@password = @options[:password]
+@name = `hostname -f`.strip
+@debug = @options[:debug]
+@install_dir = "/usr/local/logicmonitor"
 
 # Execute the run function.
 run(@name, @install_dir)

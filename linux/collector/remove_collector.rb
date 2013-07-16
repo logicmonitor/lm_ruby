@@ -17,98 +17,46 @@
 # Authors: Perry Yang, Ethan Culler-Mayeno
 #
 
+# require 'rubygems'   #needed for Ruby 1.8.7 support
 require 'json'
 require 'open-uri'
 require 'net/http'
 require 'net/https'
 require 'optparse'   #not needed for RightScript  
 
-opt_error = false
-begin
-  @options = {}
-  OptionParser.new do |opts|
-    opts.banner = "Usage: add_collector.rb -c <company> -u <user> -p <password> [-d]"
-
-    opts.on("-d", "--debug", "Turn on debug print statements") do |v|
-      @options[:debug] = v
-    end
-
-    opts.on("-c", "--company COMPANY", "LogicMonitor Account") do |c|
-      @options[:company] = c
-    end
-
-    opts.on("-u", "--user USERNAME", "LogicMonitor user name") do |u|
-      @options[:user] = u
-    end
-
-    opts.on("-p", "--password PASSWORD", "LogicMonitor password") do |p|
-      @options[:password] = p
-    end
-  end.parse!
-rescue OptionParser::MissingArgument => ma
-   puts ma.inspect
-   opt_error = true
-end  
-
-begin
-  raise OptionParser::MissingArgument if @options[:company].nil?
-rescue  OptionParser::MissingArgument => ma
-  puts "Missing option: -c <company>"
-   opt_error = true
-end  
-
-begin
-  raise OptionParser::MissingArgument if @options[:user].nil?
-rescue  OptionParser::MissingArgument => ma
-  puts "Missing option: -u <username>"
-  opt_error = true
-end  
-
-begin
-  raise OptionParser::MissingArgument if @options[:password].nil?
-rescue  OptionParser::MissingArgument => ma
-  puts "Missing option: -p <password>"
-  opt_error = true
-end  
-
-if opt_error
-  exit 1
-end
-
-#
-# RightScale Input handling here.
-#
-@company = @options[:company]
-@user = @options[:user]
-@password = @options[:password]
-@name = `hostname`.strip
-@debug = @options[:debug]
-@install_dir = "/usr/local/logicmonitor"
 
 #runs the utility functions and controls the flow of the program
 def run(name, install_dir)
 
   agent_status = `service logicmonitor-agent status`
-  unless agent_status.include?("not running")
+  if agent_status.include?("running") and not agent_status.include?("not running")
     puts "LogicMonitor collector is running"
     puts `service logicmonitor-agent stop`
+  else
+    puts "LogicMonitor Agent Stopped"
   end
 
   watchdog_status = `service logicmonitor-watchdog status`
-  unless watchdog_status.include?("not running")
+  if watchdog_status.include?("running") and not watchdog_status.include?("not running")
     puts "LogicMonitor watchdog is running"
     puts `service logicmonitor-watchdog stop`
+  else
+    puts "LogicMonitor Watchdog Stopped"
   end
 
   collector = get_collector(name)  
-  file_name = "/logicmonitorsetup" + collector["id"].to_s + "_" + get_arch + ".bin"
-  install_file = install_dir + file_name
-  agent_file = install_dir + "/agent/conf/agent.conf"
-  if File.exists?(agent_file)
-    uninstall_collector(install_dir)
-  end
-  if File.exists?(install_file)
-    delete_installer(install_file)
+  if collector.nil?
+    puts "unable to find collector matching #{name}"
+  else
+    file_name = "/logicmonitorsetup" + collector["id"].to_s + "_" + get_arch + ".bin"
+    install_file = install_dir + file_name
+    agent_file = install_dir + "/agent/conf/agent.conf"
+    if File.exists?(agent_file)
+      uninstall_collector(install_dir)
+    end
+    if File.exists?(install_file)
+      delete_installer(install_file)
+    end
   end
   if collector
     puts "Matching collector found on server"
@@ -238,6 +186,67 @@ def rpc(action, args={})
   return nil
 end
 
+opt_error = false
+begin
+  @options = {}
+  OptionParser.new do |opts|
+    opts.banner = "Usage: add_collector.rb -c <company> -u <user> -p <password> [-d]"
+
+    opts.on("-d", "--debug", "Turn on debug print statements") do |v|
+      @options[:debug] = v
+    end
+
+    opts.on("-c", "--company COMPANY", "LogicMonitor Account") do |c|
+      @options[:company] = c
+    end
+
+    opts.on("-u", "--user USERNAME", "LogicMonitor user name") do |u|
+      @options[:user] = u
+    end
+
+    opts.on("-p", "--password PASSWORD", "LogicMonitor password") do |p|
+      @options[:password] = p
+    end
+  end.parse!
+rescue OptionParser::MissingArgument => ma
+   puts ma.inspect
+   opt_error = true
+end  
+
+begin
+  raise OptionParser::MissingArgument if @options[:company].nil?
+rescue  OptionParser::MissingArgument => ma
+  puts "Missing option: -c <company>"
+   opt_error = true
+end  
+
+begin
+  raise OptionParser::MissingArgument if @options[:user].nil?
+rescue  OptionParser::MissingArgument => ma
+  puts "Missing option: -u <username>"
+  opt_error = true
+end  
+
+begin
+  raise OptionParser::MissingArgument if @options[:password].nil?
+rescue  OptionParser::MissingArgument => ma
+  puts "Missing option: -p <password>"
+  opt_error = true
+end  
+
+if opt_error
+  exit 1
+end
+
+#
+# RightScale Input handling here.
+#
+@company = @options[:company]
+@user = @options[:user]
+@password = @options[:password]
+@name = `hostname -f`.strip
+@debug = @options[:debug]
+@install_dir = "/usr/local/logicmonitor"
 
 # Execute the run function.
 run(@name, @install_dir)
