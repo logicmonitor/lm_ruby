@@ -47,7 +47,7 @@ def parse_groups(str)
 end
 
 def parse_properties(properties)
-  returtn JSON.parse(properties)
+  return JSON.parse(properties)
 end
 
 ###################################################################
@@ -74,19 +74,6 @@ end
 #                                                                 #
 ###################################################################
 
-
-
-#update a host
-
-def update_host(hostname, displayname, collector, description, groups, properties, alertenable)
-  host = get_host_by_displayname(displayname) || get_host_by_hostname(hostname, collector)
-  h = build_host_hash(hostname, displayname, collector, URI::encode(description), groups, properties, alertenable)
-  if host
-    h.store("id", host["id"])
-  end
-  update_resp = rpc("updateHost", h)
-  #puts(update_resp)
-end
 
 #return a host object from displayname
 def get_host_by_displayname(displayname)
@@ -140,7 +127,7 @@ def build_host_hash(hostname, displayname, collector, description, groups, prope
     h.store("agentId", agent["id"])
   end
   if description
-    h.store("description", description)
+    h.store("description", URI::encode(description))
   end
   group_ids = ""
   groups.each do |group|
@@ -157,8 +144,6 @@ def build_host_hash(hostname, displayname, collector, description, groups, prope
       index = index + 1
     end
   end
-  h.store("propName#{index}", "puppet.update.on") 
-  h.store("propValue#{index}", URI::encode(DateTime.now().to_s))
   h
 end
 
@@ -209,8 +194,6 @@ def build_group_param_hash(fullpath, description, properties, alertenable, paren
       index = index + 1
     end
   end
-  hash.store("propName#{index}", "puppet.update.on") 
-  hash.store("propValue#{index}", DateTime.now().to_s)
   hash
 end
 
