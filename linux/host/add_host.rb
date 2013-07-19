@@ -147,19 +147,6 @@ def build_host_hash(hostname, displayname, collector, description, groups, prope
   h
 end
 
-# Return a collector object based on the ID
-def get_agent(id)
-  agent = JSON.parse(rpc("getAgent", {"id"=>id}))
-  ret_agent = nil
-  if agent["data"]
-    ret_agent = agent["data"]
-  else
-    puts("Unable to retrieve collector information from the server")
-  end
-  ret_agent
-end
-
-
 # Return a collector object based on the description
 def get_agent(description)
   agents = JSON.parse(rpc("getAgents", {}))
