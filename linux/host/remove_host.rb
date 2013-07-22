@@ -294,7 +294,7 @@ begin
       @options[:hostname] = h
     end
     
-    opts.on("-n", "--displayname DISPLAYNAME", "How this host should appear in LogicMonitor account") do |n|
+    opts.on("-n", "--displayname DISPLAYNAME", "The human readable name for the host in your LogicMonitor account") do |n|
       @options[:displayname] = n
     end
 
