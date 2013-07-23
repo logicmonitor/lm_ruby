@@ -1,11 +1,12 @@
-# remove_host.rb
+# sdt_host.rb
 #
-# This is a ruby script to handle the removal of devices from LogicMonitor WebApp
+# This is a ruby script to handle putting devices monitored by LogicMonitor into scheduled down time (SDT) or maintenance windows.
 #
 # Requires:
 # Ruby
 # Ruby gems
 #   json
+#   active_support
 # open-url
 # net/http(s)
 #
@@ -21,13 +22,14 @@
 # Authors: Perry Yang, Ethan Culler-Mayeno
 #
 
-# require 'rubygems'   #needed for Ruby 1.8.7 support
+require 'rubygems'
 require 'json'
 require 'open-uri'
 require 'net/http'
 require 'net/https'
 require 'time'
 require 'date'
+require 'active_support/time'
 require 'optparse'   #not needed for RightScript  
 
 
@@ -35,7 +37,7 @@ def run(hostname, displayname, collector, starttime, endtime)
   host_exist = get_host_by_displayname(displayname) || get_host_by_hostname(hostname, collector)
 #  p host_exist
   if host_exist
-    puts "Creating SDT for #{hostname}"
+    puts "Creating SDT for #{host_exist["displayedAs"]}"
     puts rpc("setHostSDT", {"id" => 0, "type" => 1, "notifyCC" => true, "hostId" => host_exist["id"],
       "year" => starttime.year, "month" => starttime.month, "day" => starttime.day, "hour" => starttime.hour, "minute" => starttime.min,
       "endYear" => endtime.year, "endMonth" => endtime.month, "endDay" => endtime.day, "endHour" => endtime.hour, "endMinute" => endtime.min})
@@ -55,17 +57,21 @@ end
 
 #return a time object from a comma separated string representing the time
 def to_time(timevar)
-  if timevar.class == Time
-    return timevar
+  offset = get_offset/3600
+  if timevar.nil? or timevar.strip.empty?
+     zone = ActiveSupport::TimeZone[offset].name
+     Time.zone = zone 
+     return Time.zone.now
   elsif timevar.class == String
-    time_array = timevar.gsub(/\s+/, "").split(",")
-    p time_array
-    if time_array.length < 5
-      puts "Non-default time values must be in the format \"year, month, day, hour, minute\""
-      puts "Exiting"
-      exit 3
-    end
-    return Time.new(time_array[0], time_array[1], time_array[2], time_array[3], time_array[4])
+     if timevar.match(/^\d{4}-\d{2}-\d{2}t\d{2}:\d{2}/)
+       t = timevar.match(/^(\d{4})-(\d{2})-(\d{2})t(\d{2}):(\d{2})/).captures
+       time = Time.new(t[0], (t[1].to_i) - 1, t[2], t[3], t[4], 0, offset) # month is -1 as LogicMonitor API represents month as 0 - 11
+       return time
+     else
+       puts "Start time was in an unrecognized format."
+       puts "Exiting"
+       exit 3
+     end
   else
     puts "An unrecognized input for a time value was entered."
     puts "Time value #{timevar} with class #{timevar.class} is not supported."
@@ -78,21 +84,17 @@ end
 def end_time(starttime, duration)
   if duration
     endtime = starttime
-    duration.split(" ").each do |d|
-      case d[-1]
-      when "y"
-        endtime = Time.new(endtime.year + d.to_i, endtime.month, endtime.day, endtime.hour, endtime.min)
-      when "m"
-        endtime = Time.new(endtime.year, endtime.month + d.to_i, endtime.day, endtime.hour, endtime.min)
-      when "d"
-        endtime = Time.new(endtime.year, endtime.month, endtime.day + d.to_i, endtime.hour, endtime.min)
-      when "h"
-        endtime = Time.new(endtime.year, endtime.month, endtime.day, endtime.hour + d.to_i, endtime.min)
+    seconds = 0
+    duration.split(" ").each do |dur|
+      if dur.include?("d")
+        seconds = seconds + (60 * 60 * 24 * dur.to_i) #add seconds in the number of days
+      elsif dur.include?("h")
+        seconds = seconds + (60 * 60 * dur.to_i) #add seconds in the count of hours
       else
-        endtime = Time.new(endtime.year, endtime.month, endtime.day, endtime.hour, endtime.min + d.to_i)
+        seconds = seconds + (60 * dur.to_i) #add seconds in the count of minutes
       end
-    end
-    return endtime
+    end    
+    return endtime + seconds
   else
     return endtime + (60*60) #default of 1 hour
   end
@@ -104,8 +106,8 @@ end
 def get_host_by_displayname(displayname)
   host = nil
   host_json = rpc("getHost", {"displayName" => URI::encode(displayname)})
-  #puts(host_json)
   host_resp = JSON.parse(host_json)
+#  p host_resp
   if host_resp["status"] == 200
     host = host_resp["data"]
 #      puts("Found host matching #{displayname}")
@@ -119,6 +121,7 @@ def get_host_by_hostname(hostname, collector)
   if collector
     hosts_json = rpc("getHosts", {"hostGroupId" => 1})
     hosts_resp = JSON.parse(hosts_json)
+#    p hosts_resp
     collector_resp = JSON.parse(rpc("getAgents", {}))
     if hosts_resp["status"] == 200
       hosts_resp["data"]["hosts"].each do |h|
@@ -158,6 +161,20 @@ def get_agent(description)
   end
   ret_agent
 end
+
+def get_offset
+  offset_resp = JSON.parse(rpc("getTimeZoneSetting", {}))
+  if offset_resp["status"] == 200 and not offset_resp["data"].nil?
+    return offset_resp["data"]["offset"]
+  else
+    puts "Unable to retrieve time zone information from server"
+    p offset_resp
+    puts "Using GMT"
+    return 0
+  end
+  
+end
+
 
 def rpc(action, args={})
   company = @company
@@ -219,19 +236,19 @@ begin
       @options[:displayname] = n
     end
 
-    opts.on("-C", "--collector COLLECTOR", "The FQDN of the collector monitoring this device (required if -h is set)") do |n|
-      @options[:displayname] = n
+    opts.on("-C", "--collector COLLECTOR", "The FQDN of the collector monitoring this device (required if -h is set)") do |col|
+      @options[:displayname] = col
     end
     
     opts.on("-n", "--displayname DISPLAYNAME", "The human readable name for the host in your LogicMonitor account") do |n|
       @options[:displayname] = n
     end
 
-    opts.on("-s", "--starttime STARTTIME", "Time in the format \"year, month, day, hour, min\" for the start time of the SDT") do |s|
+    opts.on("-s", "--starttime STARTTIME", "Time in the format \"2013-07-23t00:00\" for the start time of the SDT") do |s|
       @options[:starttime] = s
     end
 
-    opts.on("-D", "--duration DURATION", "How long this device should be in scheduled downtime. Format: 1y 2m 4d 6h 25") do |dur|
+    opts.on("-D", "--duration DURATION", "How long this device should be in scheduled downtime. Format: 4d 6h 25") do |dur|
       @options[:duration] = dur
     end
 
@@ -266,6 +283,7 @@ if opt_error
   exit 1
 end
 
+
 #required inputs
 @company = @options[:company]
 @user = @options[:user]
@@ -275,7 +293,7 @@ end
 @displayname = @options[:displayname] || `hostname -f`.strip
 @hostname = @options[:hostname] || `hostname -f`.strip
 @collector = @options[:collector]
-@starttime = to_time(@options[:starttime] || Time.now)
+@starttime = to_time(@options[:starttime])
 @endtime = end_time(@starttime, @options[:duration])
 
 run(@hostname, @displayname, @collector, @starttime, @endtime)
