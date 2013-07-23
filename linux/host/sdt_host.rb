@@ -7,6 +7,7 @@
 # Ruby gems
 #   json
 #   active_support
+#   tzinfo
 # open-url
 # net/http(s)
 #
@@ -39,8 +40,8 @@ def run(hostname, displayname, collector, starttime, endtime)
   if host_exist
     puts "Creating SDT for #{host_exist["displayedAs"]}"
     puts rpc("setHostSDT", {"id" => 0, "type" => 1, "notifyCC" => true, "hostId" => host_exist["id"],
-      "year" => starttime.year, "month" => starttime.month, "day" => starttime.day, "hour" => starttime.hour, "minute" => starttime.min,
-      "endYear" => endtime.year, "endMonth" => endtime.month, "endDay" => endtime.day, "endHour" => endtime.hour, "endMinute" => endtime.min})
+      "year" => starttime.year, "month" => (starttime.month.to_i) - 1, "day" => starttime.day, "hour" => starttime.hour, "minute" => starttime.min,
+      "endYear" => endtime.year, "endMonth" => (endtime.month.to_i) - 1, "endDay" => endtime.day, "endHour" => endtime.hour, "endMinute" => endtime.min})
   else
     puts "Unable to find matching host"
     puts "Exiting"
@@ -58,16 +59,24 @@ end
 #return a time object from a comma separated string representing the time
 def to_time(timevar)
   offset = get_offset/3600
+  zone = ActiveSupport::TimeZone[offset].name
+  Time.zone = zone 
   if timevar.nil? or timevar.strip.empty?
-     zone = ActiveSupport::TimeZone[offset].name
-     Time.zone = zone 
-     return Time.zone.now
+     if Time.zone.now.isdst
+       return Time.zone.now - (60 * 60)
+     else
+       return Time.zone.now
+     end
   elsif timevar.class == String
      if timevar.match(/^\d{4}-\d{2}-\d{2}t\d{2}:\d{2}/)
        t = timevar.match(/^(\d{4})-(\d{2})-(\d{2})t(\d{2}):(\d{2})/).captures
-       time = Time.new(t[0], (t[1].to_i) - 1, t[2], t[3], t[4], 0, offset) # month is -1 as LogicMonitor API represents month as 0 - 11
-       return time
-     else
+       time = Time.new(t[0], t[1], t[2], t[3], t[4], 0, offset)
+       if time.isdst
+         return time - (60*60)
+       else
+         return time
+       end
+      else
        puts "Start time was in an unrecognized format."
        puts "Exiting"
        exit 3
@@ -82,8 +91,8 @@ end
 
 #returns the end time from starttime and duration
 def end_time(starttime, duration)
+  endtime = starttime
   if duration
-    endtime = starttime
     seconds = 0
     duration.split(" ").each do |dur|
       if dur.include?("d")
