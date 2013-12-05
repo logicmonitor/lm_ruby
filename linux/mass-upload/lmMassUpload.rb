@@ -78,8 +78,4 @@ end
 
 apiGet(action)
 
-if (ARGV[0]==nil||ARGV[1]==nil||ARGV[2]==nil||ARGV[3]==nil)
-  puts "\n\nUsage example: 'ruby massupload.rb csvfullPath companyname username password'\n\n\n"
-end
-
 main()
