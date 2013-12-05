@@ -28,7 +28,7 @@ def main
     group[value["fullPath"]] = value["id"]
   end
 
-  lmgroupid = group["groupname"]
+  lmgroupid = group[groupname]
 
   CSV.foreach(file) do |row|
     next if row[0] =~ /^#/
