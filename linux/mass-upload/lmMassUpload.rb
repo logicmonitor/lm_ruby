@@ -28,8 +28,10 @@ def main
     group[value["fullPath"]] = value["id"]
   end
 
+  lmgroupid = group["groupname"]
+
   CSV.foreach(file) do |row|
-    lmgroupid = group["groupname"]
+    next if row[0] =~ /^#/
     if (row[1]!=nil) #should not be nil anyway for any host to be added, for better logging outputs
       if (defined?(group[row[3]].nil?))
         groupid=group[row[3]]

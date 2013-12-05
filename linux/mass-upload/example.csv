@@ -1,8 +1,9 @@
-9,localhost,,Group/Hello
-9,10.0.1.123,Test
-9,10.0.0.3,,Group/Hello
-9,10.2.3.4,TestPerry
-9,10.2.1.3,,Group
-9,192.168.1.2,,Hello
-9,192.123.1.5,,Group
-9,10.2.3.2,SupSon
+# collector id,hostname (or ip),display name,group
+9,localhost,localhost,Group/Hello
+9,10.0.1.123,testhost,Group
+9,10.1.0.3,host-12,Group/Hello
+9,10.2.3.4,host-aa,switches
+9,10.2.1.3,host-13,Group
+9,192.168.1.2,host-01,Hello
+9,192.123.1.5,host1,Group
+9,10.2.3.2,host2.foo.com,linux servers
