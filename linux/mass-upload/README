@@ -7,10 +7,10 @@ Needs:
 - password 
 
 Example to mass upload hosts
-root:> ruby lmMassUpload.rb csvFullPath companyname username password
+$ ruby lmMassUpload.rb csvFullPath companyname username password
 
 You can write the output to a log file
-root:> ruby lmMassUpload.rb csvFullPath companyname username password > log.txt
+$ ruby lmMassUpload.rb csvFullPath companyname username password > log.txt
 
 The arguments must be added in the order that is seen in the example
 

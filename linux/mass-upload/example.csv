@@ -1,4 +1,6 @@
 # collector id,hostname (or ip),display name,group
+# group must be full path including any parent groups. for example,
+# parent group/child group 1/child group 2
 9,localhost,localhost,Group/Hello
 9,10.0.1.123,testhost,Group
 9,10.1.0.3,host-12,Group/Hello
