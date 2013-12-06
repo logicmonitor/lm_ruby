@@ -1,5 +1,5 @@
 # lm_ruby
-LogicMonitor is a Cloud-based, full stack, IT infrastructure monitoring solution that allows you to manage your infrastructure monitoring from the Cloud. *Lm_ruby* contains a set of stand-alone scripts which can be used to manage your LogicMonitor account programmatically. These scripts are intended to be functional examples of interaction with the LogicMonitor API in ruby.
+LogicMonitor is a cloud-based, full stack, IT infrastructure monitoring solution that allows you to manage your infrastructure from the cloud. *Lm_ruby* contains a set of stand-alone scripts which can be used to manage your LogicMonitor account programmatically. These scripts are intended to be functional examples of interaction with the LogicMonitor API in ruby.
 
 ##Prerequisites
 In order to use these scripts there are a few things you will need.
@@ -12,6 +12,7 @@ This repository is not a complete set of scripts required to fully manage your L
 
 ####Platform specific tools
 The following scripts are for managing specific types of devices.
+
 **Linux collector management:**
 - add_collector
 - remove_collector
