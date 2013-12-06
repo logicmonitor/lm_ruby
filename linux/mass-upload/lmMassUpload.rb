@@ -1,3 +1,22 @@
+# lmMassUpload.rb
+#
+# This is a ruby script to handle the mass host imports
+#
+# Requires:
+# Ruby
+# Ruby gems
+# csv
+# json
+# open-url
+# net/http(s)
+# rbconfig
+#
+# Authorized Sources:
+# LogicMonitor: https://github.com/logicmonitor
+#
+# Authors: Perry Yang
+#
+
 require 'csv'
 require 'net/http'
 require 'net/https'
