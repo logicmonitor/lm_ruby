@@ -341,6 +341,13 @@ rescue  OptionParser::MissingArgument => ma
   opt_error = true
 end  
 
+begin
+  raise OptionParser::MissingArgument if @options[:hostname].nil?
+rescue  OptionParser::MissingArgument => ma
+  puts "Missing option: -h <hostname>"
+  opt_error = true
+end  
+
 if opt_error
   exit 1
 end
@@ -350,9 +357,9 @@ end
 @user = @options[:user]
 @password = @options[:password]
 @collector = @options[:collector]
+@hostname = @options[:hostname]
 
 #optional/default inputs
-@hostname = @options[:hostname] || `hostname -f`.strip
 @displayname = @options[:displayname] || @hostname
 
 run(@hostname, @displayname, @collector)
