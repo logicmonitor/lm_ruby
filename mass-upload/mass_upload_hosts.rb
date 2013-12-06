@@ -1,50 +1,73 @@
-# add_host.rb
+# lmMassUpload.rb
 #
-# This is a ruby script to handle the addition of devices into LogicMonitor WebApp
+# This is a ruby script to handle the mass host imports
 #
 # Requires:
 # Ruby
 # Ruby gems
-#   json
+# csv
+# json
 # open-url
 # net/http(s)
+# rbconfig
 #
-# Created for use as a RightScale RightScript.
 # Authorized Sources:
 # LogicMonitor: https://github.com/logicmonitor
-# RightScale Marketplace
 #
-# Authors: Phil Schorr, Ethan
+# Authors: Perry Yang, Ethan Culler
 #
 
-# require 'rubygems'   #needed for Ruby 1.8.7 support
+require 'csv'
 require 'json'
 require 'open-uri'
 require 'net/http'
 require 'net/https'
 require 'optparse'   #not needed for RightScript
 
-def get_alerts()
-  resp = rpc("getAlerts", {"level" => "warn"})
-  alert_json = JSON.parse(resp)
-  if alert_json['data'] 
-    warns = 0
-    error = 0
-    crit = 0
-    alert_json['data']['alerts'].each do | alert |
-      if alert['level'].eql?("critical")
-        crit = crit + 1
-      elsif alert['level'].eql?("error")
-        error = error + 1
-      elsif alert['level'].eql?("warn")
-        warns = warns + 1
+
+def main
+  id    = []
+  names = []
+  file  = @file
+
+  date = `date +"%Y%m%d%H%M%S"`
+  (groupname = "lmsupport-import-"+"#{date}").chomp!
+  rpc("addHostGroup", {"alertEnable" => false, "name" => groupname})
+ 
+  string = rpc("getHostGroups") #makes API call to grab host group
+  hostgroups= JSON.parse(string)
+  my_arr=hostgroups['data']
+
+  group = Hash.new
+  my_arr.each do |value|
+    group[value["fullPath"]] = value["id"]
+  end
+
+  lmgroupid = group[groupname]
+
+  CSV.foreach(file) do |row|
+    next if row[0] =~ /^#/
+    if (row[1]!=nil) #should not be nil anyway for any host to be added, for better logging outputs
+      if (defined?(group[row[3]].nil?))
+        groupid=group[row[3]]
+        if (row[2]!=nil) #if the displayname is not nil
+          puts "\n Host: " + row[1] 
+          puts rpc("addHost", {"hostName" =>row[1], "displayedAs" =>row[2], "agentId" => row[0], "hostGroupIds" => "#{groupid},#{lmgroupid}"})
+        else
+          puts "\n Host: " + row[1]
+          puts rpc("addHost", {"hostName" =>row[1], "displayedAs" =>row[1], "agentId" => row[0], "hostGroupIds" => "#{groupid},#{lmgroupid}"})
+        end
+      end
+    else
+      if(row[2]!=nil) #if displayname is nil and there is no fullpath, just place it the lmsupport-import host group
+        puts "\n Host: " + row[1]
+        puts rpc("addHost", {"hostName" =>row[1], "displayedAs" =>row[2], "agentId" => row[0], "hostGroupIds" => "#{lmgroupid}"})
+      else
+        puts "\n Host: " + row[1]
+        puts rpc("addHost", {"hostName" =>row[1], "displayedAs" =>row[1], "agentId" => row[0], "hostGroupIds" => "#{lmgroupid}"})
       end
     end
   end
-  puts "Alerts by severity:"
-  puts "critical = #{crit.to_s}"
-  puts "error = #{error.to_s}"
-  puts "warn = #{warns.to_s}"
 end
 
 
@@ -53,12 +76,11 @@ def rpc(action, args={})
   username = @user
   password = @password
   url = "https://#{company}.logicmonitor.com/santaba/rpc/#{action}?"
-  first_arg = true
   args.each_pair do |key, value|
     url << "#{key}=#{value}&"
   end
   url << "c=#{company}&u=#{username}&p=#{password}"
-  #puts(url)
+#  puts(url)
   uri = URI(url)
   begin
     http = Net::HTTP.new(uri.host, 443)
@@ -76,18 +98,17 @@ def rpc(action, args={})
   return nil
 end
 
-
 ###################################################################
 #                                                                 #
 #       Begin running part of the script                          #
 #                                                                 #
 ###################################################################
 
-opt_error = false
+pt_error = false
 begin
   @options = {}
   OptionParser.new do |opts|
-    opts.banner = "Usage: add_collector.rb -c <company> -u <user> -p <password> -C <collectorName> [-h <hostname> -n <displayname> -D <description> -g <grouplist> -P <properties> -a <alertenable> -d]"
+    opts.banner = "Usage: ruby mass_upload_hosts.rb -c <company> -u <user> -p <password> -f <file>"
 
     opts.on("-d", "--debug", "Turn on debug print statements") do |v|
       @options[:debug] = v
@@ -105,7 +126,10 @@ begin
       @options[:password] = p
     end
 
-
+    opts.on("-f", "--file FILE", "A CSV file contaning the hosts to be added") do |f|
+      @options[:file] = f
+    end
+    
   end.parse!
 rescue OptionParser::MissingArgument => ma
    puts ma.inspect
@@ -133,6 +157,13 @@ rescue  OptionParser::MissingArgument => ma
   opt_error = true
 end  
 
+begin
+  raise OptionParser::MissingArgument if @options[:file].nil?
+rescue  OptionParser::MissingArgument => ma
+  puts "Missing option: -f <file>"
+  opt_error = true
+end  
+
 if opt_error
   exit 1
 end
@@ -141,12 +172,6 @@ end
 @company = @options[:company]
 @user = @options[:user]
 @password = @options[:password]
-@collector = @options[:collector]
+@file = @options[:file]
 
-#optional/default inputs
-@hostname = @options[:hostname] || `hostname -f`.strip
-@displayname = @options[:displayname] || @hostname
-@description = @options[:description] || ""
-
-get_alerts
-
+main()

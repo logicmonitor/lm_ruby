@@ -1,6 +1,6 @@
-# add_host.rb
+# remove_host.rb
 #
-# This is a ruby script to handle the addition of devices into LogicMonitor WebApp
+# This is a ruby script to handle the removal of devices from LogicMonitor WebApp
 #
 # Requires:
 # Ruby
@@ -22,18 +22,17 @@ require 'json'
 require 'open-uri'
 require 'net/http'
 require 'net/https'
-require 'optparse'   #not needed for RightScript
+require 'optparse'   #not needed for RightScript  
 
-def run(hostname, displayname, collector, description, groups, properties, alertenable)
+def run(hostname, displayname, collector)
   host_exist = get_host_by_displayname(displayname) || get_host_by_hostname(hostname, collector)
   if host_exist
-    puts "Host already exists in LogicMonitor system."
-    puts "Exiting."
-    exit 1
+    delete_resp = rpc("deleteHost", {"hostId" => host_exist["id"], "deleteFromSystem" => true})
   else
-    puts "adding host to LogicMonitor system"
-    return add_host(hostname, displayname, collector, description, groups, properties, alertenable)
-  end
+    puts "Unable to find matching host"
+    puts "Exiting"
+    exit 1
+  end 
 end
 
 ###################################################################
@@ -56,8 +55,8 @@ end
 #                                                                 #
 ###################################################################
 
-def add_host(hostname, displayname, collector, description, groups, properties, alertenable)
-  puts "Creating LogicMonitor host \"#{hostname}\""
+def remove_host(hostname, displayname, collector, description, groups, properties, alertenable)
+  puts "d LogicMonitor host \"#{hostname}\""
   groups.each do |group|
     if get_group(group).nil?
       puts "Couldn't find parent group #{group}. Creating." 
@@ -269,7 +268,7 @@ opt_error = false
 begin
   @options = {}
   OptionParser.new do |opts|
-    opts.banner = "Usage: add_collector.rb -c <company> -u <user> -p <password> -C <collectorName> [-h <hostname> -n <displayname> -D <description> -g <grouplist> -P <properties> -a <alertenable> -d]"
+    opts.banner = "Usage: remove_host.rb -c <company> -u <user> -p <password> -C <collectorName> -H <hostname> [-n <displayname> -d]"
 
     opts.on("-d", "--debug", "Turn on debug print statements") do |v|
       @options[:debug] = v
@@ -291,28 +290,12 @@ begin
       @options[:collector] = collector
     end
     
-    opts.on("-h", "--hostname HOSTNAME", "Hostname of this device") do |h|
-      @options[:hostname] = h
+    opts.on("-H", "--name HOSTNAME", "Hostname of this device") do |hname|
+      @options[:name] = hname
     end
     
-    opts.on("-n", "--displayname DISPLAYNAME", "How this host should appear in LogicMonitor account") do |n|
+    opts.on("-n", "--displayname DISPLAYNAME", "The human readable name for the host in your LogicMonitor account") do |n|
       @options[:displayname] = n
-    end
-
-    opts.on("-D", "--description DESCRIPTION", "Long text host description") do |desc|
-      @options[:description] = desc
-    end
-
-    opts.on("-g", "--groups \"/GROUP1,/PARENT/GROUP2,...\"", "The set of groups (fullpath) the host should belong to") do |g|
-      @options[:groups] = g
-    end
-
-    opts.on("-P", "--properties \{\"property1\":\"value1\",\"property2\":\"value2\",...\}", "JSON hash of host properties") do |props|
-      @options[:properties] = props
-    end
-    
-    opts.on("-a", "--alertenable", "Turn on alerting for the host") do |p|
-      @options[:properties] = a
     end
 
   end.parse!
@@ -345,7 +328,15 @@ end
 begin
   raise OptionParser::MissingArgument if @options[:collector].nil?
 rescue  OptionParser::MissingArgument => ma
-  puts "Missing option: -C <collector>"
+  puts "Missing option: -H <hostname>"
+  opt_error = true
+end  
+
+
+begin
+  raise OptionParser::MissingArgument if @options[:name].nil?
+rescue  OptionParser::MissingArgument => ma
+  puts "Missing option: -H <hostname>"
   opt_error = true
 end  
 
@@ -358,28 +349,9 @@ end
 @user = @options[:user]
 @password = @options[:password]
 @collector = @options[:collector]
+@hostname = @options[:name]
 
 #optional/default inputs
-@hostname = @options[:hostname] || `hostname -f`.strip
 @displayname = @options[:displayname] || @hostname
-@description = @options[:description] || ""
 
-if @options[:groups]
-  @groups = parse_groups(@options[:groups])
-else
-  @groups = []
-end
-
-if @options[:properties]
-  @properties = parse_properties(@options[:properties])
-else
-  @properties = {}
-end
-
-if @options[:alertenable]
-  @alertenable = true
-else
-  @alertenable = false
-end
-
-run(@hostname, @displayname, @collector, @description, @groups, @properties, @alertenable)
+run(@hostname, @displayname, @collector)

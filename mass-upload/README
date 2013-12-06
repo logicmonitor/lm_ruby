@@ -1,0 +1,15 @@
+To use the mass upload script
+
+Needs:
+- fullpath of csv file
+- companyname
+- username
+- password 
+
+Example to see usage of the script
+$ruby mass_upload_hosts.rb -h
+
+All host groups must be present already in LogicMonitor Account before doing the mass upload,
+the script does not create a host group if a specified hostgroup is not located
+
+

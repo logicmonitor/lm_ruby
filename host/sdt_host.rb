@@ -223,7 +223,7 @@ opt_error = false
 begin
   @options = {}
   OptionParser.new do |opts|
-    opts.banner = "Usage: add_collector.rb -c <company> -u <user> -p <password> -C <collectorName> [-h <hostname> -n <displayname> -D <description> -g <grouplist> -P <properties> -a <alertenable> -d]"
+    opts.banner = "Usage: sdt_host.rb -c <company> -u <user> -p <password> -H <hostname> [-C <collectorName> -n <displayname> -D <duration> -s <starttime> -d]"
 
     opts.on("-d", "--debug", "Turn on debug print statements") do |v|
       @options[:debug] = v
@@ -241,8 +241,8 @@ begin
       @options[:password] = p
     end
 
-    opts.on("-h", "--hostname HOSTNAME", "IP Address or FQDN of the host") do |n|
-      @options[:displayname] = n
+    opts.on("-H", "--name HOSTNAME", "IP Address or FQDN of the host") do |hname|
+      @options[:name] = hname
     end
 
     opts.on("-C", "--collector COLLECTOR", "The FQDN of the collector monitoring this device (required if -h is set)") do |col|
@@ -288,6 +288,13 @@ rescue  OptionParser::MissingArgument => ma
   opt_error = true
 end  
 
+begin
+  raise OptionParser::MissingArgument if @options[:name].nil?
+rescue  OptionParser::MissingArgument => ma
+  puts "Missing option: -H <hostname>"
+  opt_error = true
+end  
+
 if opt_error
   exit 1
 end
@@ -297,10 +304,10 @@ end
 @company = @options[:company]
 @user = @options[:user]
 @password = @options[:password]
+@hostname = @options[:name] 
 
 #optional/default inputs
-@displayname = @options[:displayname] || `hostname -f`.strip
-@hostname = @options[:hostname] || `hostname -f`.strip
+@displayname = @options[:displayname] || @hostname
 @collector = @options[:collector]
 @starttime = to_time(@options[:starttime])
 @endtime = end_time(@starttime, @options[:duration])
