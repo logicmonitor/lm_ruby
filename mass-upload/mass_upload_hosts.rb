@@ -25,11 +25,6 @@ require 'net/https'
 require 'optparse'   #not needed for RightScript
 
 
-if (ARGV[0]==nil||ARGV[1]==nil||ARGV[2]==nil||ARGV[3]==nil)
-  puts "\n\nUsage example: 'ruby massupload.rb csvfullPath companyname username password'\n\n\n"
-end
-
-
 def main
   id    = []
   names = []
@@ -85,7 +80,7 @@ def rpc(action, args={})
     url << "#{key}=#{value}&"
   end
   url << "c=#{company}&u=#{username}&p=#{password}"
-  puts(url)
+#  puts(url)
   uri = URI(url)
   begin
     http = Net::HTTP.new(uri.host, 443)
