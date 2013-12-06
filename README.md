@@ -5,7 +5,7 @@ LogicMonitor is a Cloud-based, full stack, IT infrastructure monitoring solution
 In order to use these scripts there are a few things you will need.
 - Access to a LogicMonitor account
 - Sufficient permissions to perform the desired action
-- A ruby run time environment
+- A ruby run time environment (Ruby version 1.9.3 or later)
 
 ##Overview
 This repository is not a complete set of scripts required to fully manage your LogicMonitor account, nor does it cover the full extend of the LogicMonitor API. Here's what we have so far.
