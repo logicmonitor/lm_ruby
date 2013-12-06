@@ -6,13 +6,8 @@ Needs:
 - username
 - password 
 
-Example to mass upload hosts
-$ ruby lmMassUpload.rb csvFullPath companyname username password
-
-You can write the output to a log file
-$ ruby lmMassUpload.rb csvFullPath companyname username password > log.txt
-
-The arguments must be added in the order that is seen in the example
+Example to see usage of the script
+$ruby mass_upload_hosts.rb -h
 
 All host groups must be present already in LogicMonitor Account before doing the mass upload,
 the script does not create a host group if a specified hostgroup is not located
