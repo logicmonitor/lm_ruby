@@ -269,7 +269,7 @@ opt_error = false
 begin
   @options = {}
   OptionParser.new do |opts|
-    opts.banner = "Usage: add_collector.rb -c <company> -u <user> -p <password> -C <collectorName> [-h <hostname> -n <displayname> -D <description> -g <grouplist> -P <properties> -a <alertenable> -d]"
+    opts.banner = "Usage: add_host.rb -c <company> -u <user> -p <password> -C <collectorName> -H <hostname> [-n <displayname> -D <description> -g <grouplist> -P <properties> -a <alertenable> -d]"
 
     opts.on("-d", "--debug", "Turn on debug print statements") do |v|
       @options[:debug] = v
@@ -290,9 +290,9 @@ begin
     opts.on("-C", "--collector COLLECTOR", "Collector to monitor this host") do |collector|
       @options[:collector] = collector
     end
-    
-    opts.on("-h", "--hostname HOSTNAME", "Hostname of this device") do |h|
-      @options[:hostname] = h
+  
+    opts.on("-H", "--name HOSTNAME", "Hostname of this device") do |hname|
+      @options[:name] = hname
     end
     
     opts.on("-n", "--displayname DISPLAYNAME", "How this host should appear in LogicMonitor account") do |n|
@@ -350,9 +350,9 @@ rescue  OptionParser::MissingArgument => ma
 end  
 
 begin
-  raise OptionParser::MissingArgument if @options[:hostname].nil?
+  raise OptionParser::MissingArgument if @options[:name].nil?
 rescue  OptionParser::MissingArgument => ma
-  puts "Missing option: -h <hostname>"
+  puts "Missing option: -H <hostname>"
   opt_error = true
 end  
 
@@ -365,7 +365,7 @@ end
 @user = @options[:user]
 @password = @options[:password]
 @collector = @options[:collector]
-@hostname = @options[:hostname]
+@hostname = @options[:name]
 
 #optional/default inputs
 @displayname = @options[:displayname] || @hostname
