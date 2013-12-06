@@ -29,6 +29,10 @@ if (ARGV[0]==nil||ARGV[1]==nil||ARGV[2]==nil||ARGV[3]==nil)
   puts "\n\nUsage example: 'ruby massupload.rb csvfullPath companyname username password'\n\n\n"
 end
 
+@company  = ARGV[1]
+@username = ARGV[2]
+@password = ARGV[3]
+
 def main
   id    = []
   names = []
@@ -36,7 +40,7 @@ def main
 
   date = `date +"%Y%m%d%H%M%S"`
   (groupname = "lmsupport-import-"+"#{date}").chomp!
-  apiGet("/rpc/addHostGroup?alertEnable=false&name=#{groupname}")
+  rpc("addHostGroup", {"alertEnable" => false, "name" => groupname})
  
   string = apiGet("/rpc/getHostGroups?") #makes API call to grab host group
   hostgroups= JSON.parse(string)
@@ -55,42 +59,51 @@ def main
       if (defined?(group[row[3]].nil?))
         groupid=group[row[3]]
         if (row[2]!=nil) #if the displayname is not nil
-          action = "/rpc/addHost?hostName=#{row[1]}&displayedAs=#{row[2]}&agentId=#{row[0]}&hostGroupIds=#{groupid},#{lmgroupid}" 
           puts "\n Host: " + row[1] 
-          puts apiGet(action)
+          puts rpc("addhost", {"hostName" =>row[1], "displayedAs" =>row[2]}, "agentId" => row[0], "hostGroupIds" => "#{groupid},#{lmgroupid}"})
         else
-          action = "/rpc/addHost?hostName=#{row[1]}&displayedAs=#{row[1]}&agentId=#{row[0]}&hostGroupIds=#{groupid},#{lmgroupid}"
           puts "\n Host: " + row[1]
-          puts apiGet(action)
+          puts rpc("addhost", {"hostName" =>row[1], "displayedAs" =>row[1]}, "agentId" => row[0], "hostGroupIds" => "#{groupid},#{lmgroupid}"})
         end
       end
     else
-      if(row[2]!=nil) #if displayname is nil and there is no fullpath, just place it in root (and the lmsupport-import host group)
-        action = "/rpc/addHost?hostName=#{row[1]}&displayedAs=#{row[2]}&agentId=#{row[0]}&hostGroupIds=#{lmgroupid}"
+      if(row[2]!=nil) #if displayname is nil and there is no fullpath, just place it the lmsupport-import host group
         puts "\n Host: " + row[1]
-        puts apiGet(action)
+        puts rpc("addhost", {"hostName" =>row[1], "displayedAs" =>row[2]}, "agentId" => row[0], "hostGroupIds" => "#{lmgroupid}"})
       else
-        action = "/rpc/addHost?hostName=#{row[1]}&displayedAs=#{row[1]}&agentId=#{row[0]}&hostGroupIds=#{lmgroupid}"
         puts "\n Host: " + row[1]
-        puts apiGet(action)
+        puts rpc("addhost", {"hostName" =>row[1], "displayedAs" =>row[1]}, "agentId" => row[0], "hostGroupIds" => "#{lmgroupid}"})
       end
     end
   end
 end
 
-def apiGet(action)
-  company  = ARGV[1]
-  username = ARGV[2]
-  password = ARGV[3]
 
-  url = "https://#{company}.logicmonitor.com/santaba#{action}&c=#{company}&u=#{username}&p=#{password}"
+def rpc(action, args={})
+  company = @company
+  username = @user
+  password = @password
+  url = "https://#{company}.logicmonitor.com/santaba/rpc/#{action}?"
+  args.each_pair do |key, value|
+    url << "#{key}=#{value}&"
+  end
+  url << "c=#{company}&u=#{username}&p=#{password}"
+  #puts(url)
   uri = URI(url)
-  http = Net::HTTP.new(uri.host, 443)
-  http.use_ssl = true
-  http.verify_mode = OpenSSL::SSL::VERIFY_NONE
-  req = Net::HTTP::Get.new(uri.request_uri)
-  response = http.request(req)
-  return response.body
+  begin
+    http = Net::HTTP.new(uri.host, 443)
+    http.use_ssl = true
+    http.verify_mode = OpenSSL::SSL::VERIFY_NONE
+    req = Net::HTTP::Get.new(uri.request_uri)
+    response = http.request(req)
+    return response.body
+  rescue SocketError => se
+    puts "There was an issue communicating with #{url}. Please make sure everything is correct and try again."
+  rescue Exception => e
+    puts "There was an issue."
+    puts e.message
+  end
+  return nil
 end
 
 main()
