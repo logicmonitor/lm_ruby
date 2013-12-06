@@ -1,6 +1,6 @@
 # add_host.rb
 #
-# This is a ruby script to handle the addition of devices into LogicMonitor WebApp
+# This is a ruby script that gets the count of currently active alerts broken down by severity
 #
 # Requires:
 # Ruby
@@ -87,7 +87,7 @@ opt_error = false
 begin
   @options = {}
   OptionParser.new do |opts|
-    opts.banner = "Usage: add_collector.rb -c <company> -u <user> -p <password> -C <collectorName> [-h <hostname> -n <displayname> -D <description> -g <grouplist> -P <properties> -a <alertenable> -d]"
+    opts.banner = "Usage: get_count_alerts.rb -c <company> -u <user> -p <password> -C <collectorName> [-d]"
 
     opts.on("-d", "--debug", "Turn on debug print statements") do |v|
       @options[:debug] = v
@@ -142,11 +142,6 @@ end
 @user = @options[:user]
 @password = @options[:password]
 @collector = @options[:collector]
-
-#optional/default inputs
-@hostname = @options[:hostname] || `hostname -f`.strip
-@displayname = @options[:displayname] || @hostname
-@description = @options[:description] || ""
 
 get_alerts
 

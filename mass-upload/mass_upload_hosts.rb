@@ -14,7 +14,7 @@
 # Authorized Sources:
 # LogicMonitor: https://github.com/logicmonitor
 #
-# Authors: Perry Yang
+# Authors: Perry Yang, Ethan Culler
 #
 
 require 'csv'
