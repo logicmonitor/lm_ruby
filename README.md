@@ -122,5 +122,5 @@ Usage: sdt_host.rb -c <company> -u <user> -p <password> -H <hostname> [-C <colle
 ```
 
  
-###mass-upload/mass_upload_hosts.rb
+###mass-upload/bulk_add_hosts.rb
 This script parses a CSV formated list of hosts and adds them to monitoring. For more information [click here](/mass-upload/README)
