@@ -10,6 +10,10 @@ In order to use these scripts there are a few things you will need.
 ##Overview
 This repository is not a complete set of scripts required to fully manage your LogicMonitor account, nor does it cover the full extend of the LogicMonitor API. Here's what we have so far.
 
+####Upcoming features
+- For bulk addition of hosts, the ability to create host groups to an arbitrary depth as part of the addition.
+- 
+
 ####Platform specific tools
 The following scripts are for managing specific types of devices.
 
@@ -123,4 +127,19 @@ Usage: sdt_host.rb -c <company> -u <user> -p <password> -H <hostname> [-C <colle
 
  
 ###mass-upload/bulk_add_hosts.rb
-This script parses a CSV formated list of hosts and adds them to monitoring. For more information [click here](/mass-upload/README)
+This script parses a CSV formated list of hosts and adds them to monitoring.
+
+```
+$> ruby bulk_add_hosts.rb -h
+Usage: ruby bulk_add_hosts.rb -c <company> -u <user> -p <password> -f <file>
+    -d, --debug                      Turn on debug print statements
+    -c, --company COMPANY            LogicMonitor Account
+    -u, --user USERNAME              LogicMonitor user name
+    -p, --password PASSWORD          LogicMonitor password
+    -f, --file FILE                  A CSV file contaning the hosts to be added. 
+```
+
+We have provided a sample CSV file [example.csv](/mass-upload/example.csv) to show the required set and order of the columns. This script currently requires any host groups specified in the script to already exist in the account.
+To make sure that bulk_add_hosts can read the CSV file, you need to specify either the full path to the CSV file OR the relative path from the current working directory.
+
+

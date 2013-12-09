@@ -1,4 +1,4 @@
-# lmMassUpload.rb
+# bulk_add_hosts.rb
 #
 # This is a ruby script to handle the mass host imports
 #
@@ -110,7 +110,7 @@ pt_error = false
 begin
   @options = {}
   OptionParser.new do |opts|
-    opts.banner = "Usage: ruby mass_upload_hosts.rb -c <company> -u <user> -p <password> -f <file>"
+    opts.banner = "Usage: ruby bulk_add_hosts.rb -c <company> -u <user> -p <password> -f <file>"
 
     opts.on("-d", "--debug", "Turn on debug print statements") do |v|
       @options[:debug] = v
