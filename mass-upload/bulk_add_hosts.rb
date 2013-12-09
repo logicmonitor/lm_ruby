@@ -17,12 +17,14 @@
 # Authors: Perry Yang, Ethan Culler
 #
 
+
+# require 'rubygems'   #needed for Ruby 1.8.7 support
 require 'csv'
 require 'json'
 require 'open-uri'
 require 'net/http'
 require 'net/https'
-require 'optparse'   #not needed for RightScript
+require 'optparse'
 
 
 def main

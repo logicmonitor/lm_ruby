@@ -14,16 +14,13 @@
 # NOTE: This script keys off the displayname of the device
 #
 #
-#
-# Created for use as a RightScale RightScript.
 # Authorized Sources:
 # LogicMonitor: https://github.com/logicmonitor
-# RightScale Marketplace
 #
 # Authors: Perry Yang, Ethan Culler-Mayeno
 #
 
-require 'rubygems'
+# require 'rubygems' # required for ruby 1.8.7 support
 require 'json'
 require 'open-uri'
 require 'net/http'
@@ -31,7 +28,7 @@ require 'net/https'
 require 'time'
 require 'date'
 require 'active_support/time'
-require 'optparse'   #not needed for RightScript  
+require 'optparse'
 
 
 def run(hostname, displayname, collector, starttime, endtime)

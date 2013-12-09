@@ -9,10 +9,8 @@
 # open-url
 # net/http(s)
 #
-# Created for use as a RightScale RightScript.
 # Authorized Sources:
 # LogicMonitor: https://github.com/logicmonitor
-# RightScale Marketplace
 #
 # Authors: Phil Schorr, Ethan
 #
@@ -22,7 +20,7 @@ require 'json'
 require 'open-uri'
 require 'net/http'
 require 'net/https'
-require 'optparse'   #not needed for RightScript
+require 'optparse'
 
 def get_alerts()
   resp = rpc("getAlerts", {"level" => "warn"})

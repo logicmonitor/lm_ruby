@@ -9,10 +9,8 @@
 # open-url
 # net/http(s)
 #
-# Created for use as a RightScale RightScript.
 # Authorized Sources:
 # LogicMonitor: https://github.com/logicmonitor
-# RightScale Marketplace
 #
 # Authors: Perry Yang, Ethan Culler-Mayeno
 #
@@ -22,7 +20,7 @@ require 'json'
 require 'open-uri'
 require 'net/http'
 require 'net/https'
-require 'optparse'   #not needed for RightScript
+require 'optparse'
 
 def run(hostname, displayname, collector, description, groups, properties, alertenable)
   host_exist = get_host_by_displayname(displayname) || get_host_by_hostname(hostname, collector)
