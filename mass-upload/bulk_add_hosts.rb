@@ -83,7 +83,7 @@ def rpc(action, args={})
   end
   url << "c=#{company}&u=#{username}&p=#{password}"
 #  puts(url)
-  uri = URI(url)
+  uri = URI(URI.encode url)
   begin
     http = Net::HTTP.new(uri.host, 443)
     http.use_ssl = true
