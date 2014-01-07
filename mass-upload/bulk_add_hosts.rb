@@ -32,7 +32,7 @@ def main
   names = []
   file  = @file
   hostpaths = []
-  $a = 0
+  @a = 0
   rstring = ""
   date = `date +"%Y%m%d%H%M%S"`
   (groupname = "lmsupport-import-"+"#{date}").chomp!
@@ -55,42 +55,40 @@ def main
       if (defined?(group[row[3]].nil?))
         groupid=group[row[3]]
 	      if (row[3].include?(":"))
-    	      row[3]=row[3].gsub(" ","_")
-              row[3]=row[3].gsub(":"," ")
-	      hostpaths = row[3].split
-       	   while $a < hostpaths.length
-            hgroups = group[hostpaths[$a].gsub("_"," ")]
+    	      row[3]=row[3].gsub(":"," ")
+               hostpaths = row[3].split
+       	   while @a < hostpaths.length
+            hgroups = group[hostpaths[@a]]
             output = hgroups.to_s + "," 
             rstring << output 
-            $a+=1
-            end
-        rstring=rstring.chomp(",")
-        	
-	if (row[2]!=nil) #if the displayname is not nil
-	puts "\n Host: " + row[1] + rstring
-        puts rpc("addHost", {"hostName" =>row[1], "displayedAs" =>row[2], "agentId" => row[0], "hostGroupIds" => "#{rstring},#{lmgroupid}"})
-	else
-        puts "\n Host: " + row[1] + rstring
-        puts rpc("addHost", {"hostName" =>row[1], "displayedAs" =>row[1], "agentId" => row[0], "hostGroupIds" => "#{rstring},#{lmgroupid}"})
-	end
-	else
-	if (row[2]!=nil) #if the displayname is not nil
-	puts "\n Host: " + row[1]
-        puts rpc("addHost", {"hostName" =>row[1], "displayedAs" =>row[2], "agentId" => row[0], "hostGroupIds" => "#{groupid},#{lmgroupid}"})
-	else
-          puts "\n Host: " + row[1]
-          puts rpc("addHost", {"hostName" =>row[1], "displayedAs" =>row[1], "agentId" => row[0], "hostGroupIds" => "#{groupid},#{lmgroupid}"})
-	end
-	end
+	    @a+=1
+            end #outputs all the hostgroup ids in a string
+       		 rstring=rstring.chomp(",")
+		if (row[2]!=nil) #if the displayname is not nil
+		puts "\n Host: " + row[1]
+	        puts rpc("addHost", {"hostName" =>row[1], "displayedAs" =>row[2], "agentId" => row[0], "hostGroupIds" => "#{rstring},#{lmgroupid}"})
+		else
+        	puts "\n Host: " + row[1]
+          	puts rpc("addHost", {"hostName" =>row[1], "displayedAs" =>row[1], "agentId" => row[0], "hostGroupIds" => "#{rstring},#{lmgroupid}"})
+        end
+		else
+		if (row[2]!=nil) #if the displayname is not nil
+		puts "\n Host: " + row[1]
+	        puts rpc("addHost", {"hostName" =>row[1], "displayedAs" =>row[2], "agentId" => row[0], "hostGroupIds" => "#{groupid},#{lmgroupid}"})
+		else
+        	puts "\n Host: " + row[1]
+         	puts rpc("addHost", {"hostName" =>row[1], "displayedAs" =>row[1], "agentId" => row[0], "hostGroupIds" => "#{groupid},#{lmgroupid}"})
+        end
+	  end
         
    else
       if(row[2]!=nil) #if displayname is nil and there is no fullpath, just place it the lmsupport-import host group
         puts "\n Host: " + row[1]
         puts rpc("addHost", {"hostName" =>row[1], "displayedAs" =>row[2], "agentId" => row[0], "hostGroupIds" => "#{lmgroupid}"})
-	else
+      else
         puts "\n Host: " + row[1]
         puts rpc("addHost", {"hostName" =>row[1], "displayedAs" =>row[1], "agentId" => row[0], "hostGroupIds" => "#{lmgroupid}"})
-	end
+      end
     end
   end
 end
