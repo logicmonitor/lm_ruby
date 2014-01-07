@@ -56,28 +56,28 @@ def main
         groupid=group[row[3]]
 	      if (row[3].include?(":"))
     	      row[3]=row[3].gsub(":"," ")
-        	  hostpaths = row[3].split
+               hostpaths = row[3].split
        	   while @a < hostpaths.length
-        	hgroups = group[hostpaths[@a]]
+            hgroups = group[hostpaths[@a]]
             output = hgroups.to_s + "," 
             rstring << output 
-			@a+=1
+	    @a+=1
             end #outputs all the hostgroup ids in a string
-        rstring=rstring.chomp(",")
+       		 rstring=rstring.chomp(",")
 		if (row[2]!=nil) #if the displayname is not nil
 		puts "\n Host: " + row[1]
-        puts rpc("addHost", {"hostName" =>row[1], "displayedAs" =>row[2], "agentId" => row[0], "hostGroupIds" => "#{rstring},#{lmgroupid}"})
+	        puts rpc("addHost", {"hostName" =>row[1], "displayedAs" =>row[2], "agentId" => row[0], "hostGroupIds" => "#{rstring},#{lmgroupid}"})
 		else
-          puts "\n Host: " + row[1]
-          puts rpc("addHost", {"hostName" =>row[1], "displayedAs" =>row[1], "agentId" => row[0], "hostGroupIds" => "#{rstring},#{lmgroupid}"})
+        	puts "\n Host: " + row[1]
+          	puts rpc("addHost", {"hostName" =>row[1], "displayedAs" =>row[1], "agentId" => row[0], "hostGroupIds" => "#{rstring},#{lmgroupid}"})
         end
 		else
 		if (row[2]!=nil) #if the displayname is not nil
 		puts "\n Host: " + row[1]
-        puts rpc("addHost", {"hostName" =>row[1], "displayedAs" =>row[2], "agentId" => row[0], "hostGroupIds" => "#{groupid},#{lmgroupid}"})
+	        puts rpc("addHost", {"hostName" =>row[1], "displayedAs" =>row[2], "agentId" => row[0], "hostGroupIds" => "#{groupid},#{lmgroupid}"})
 		else
-          puts "\n Host: " + row[1]
-          puts rpc("addHost", {"hostName" =>row[1], "displayedAs" =>row[1], "agentId" => row[0], "hostGroupIds" => "#{groupid},#{lmgroupid}"})
+        	puts "\n Host: " + row[1]
+         	puts rpc("addHost", {"hostName" =>row[1], "displayedAs" =>row[1], "agentId" => row[0], "hostGroupIds" => "#{groupid},#{lmgroupid}"})
         end
 	  end
         
