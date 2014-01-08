@@ -1,5 +1,6 @@
-9,localhost,localhost,Netapp:Vcenter/ESX Hosts
-9,10.0.1.123,testhost,Networking/Routers
+collector_id,hostname,display_name,group_list
+#9,localhost,localhost,Netapp:Vcenter/ESX Hosts
+#9,10.0.1.123,testhost,Networking/Routers
 9,10.1.0.3,host-12,Production
 9,10.2.3.4,host-aa,Vcenter
 9,10.2.1.3,host-13,Vcenter

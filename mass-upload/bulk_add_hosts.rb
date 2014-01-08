@@ -25,12 +25,14 @@ require 'open-uri'
 require 'net/http'
 require 'net/https'
 require 'optparse'
+require 'pp'
 
 
 def main
   id    = []
   names = []
   file  = @file
+  filecontent = File.open(file)
   hostpaths = []
   @a = 0
   rstring = ""
@@ -42,26 +44,39 @@ def main
   hostgroups= JSON.parse(string)
   my_arr=hostgroups['data']
 
-  group = Hash.new
+  group_name_id_map = Hash.new
   my_arr.each do |value|
-    group[value["fullPath"]] = value["id"]
+    group_name_id_map[value["fullPath"]] = value["id"]
   end
 
-  lmgroupid = group[groupname]
+  lmgroupid = group_name_id_map[groupname]
 
-  CSV.foreach(file) do |row|
-    next if row[0] =~ /^#/
-    if (row[1]!=nil) #should not be nil anyway for any host to be added, for better logging outputs
-      if (defined?(group[row[3]].nil?))
-        groupid=group[row[3]]
+#  pp CSV.parse(filecontent)
+
+
+  csv = CSV.new(filecontent, {:headers => true})
+  
+  csv.each do |row|
+    if row["hostname"].nil? or row["collector_id"].nil?
+      puts "Error: All hosts MUST have a valid hostname and collector ID"
+      exit(1)
+    end
+    @hostname = row["hostname"]
+    @collector_id = row["collector_id"].
+    next if row[0].start_with?('#') #Skip row in loop if the line is commented out (A.K.A. starts with a '#' character)
+    
+    
+    
+    if (defined?(group_name_id_map[group_list].nil?))
+        groupid=group_name_id_map[row[3]]
 	      if (row[3].include?(":"))
     	      row[3]=row[3].gsub(":"," ")
-               hostpaths = row[3].split
+            hostpaths = row[3].split
        	   while @a < hostpaths.length
-            hgroups = group[hostpaths[@a]]
+            hgroups = group_name_id_map[hostpaths[@a]]
             output = hgroups.to_s + "," 
             rstring << output 
-	    @a+=1
+            @a+=1
             end #outputs all the hostgroup ids in a string
        		 rstring=rstring.chomp(",")
 		if (row[2]!=nil) #if the displayname is not nil
@@ -91,7 +106,6 @@ def main
       end
     end
   end
-end
 end
 
 def rpc(action, args={})
