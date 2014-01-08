@@ -83,7 +83,7 @@ def main
 
     puts "Adding host #{@hostname} to LogicMonitor"
     puts "RPC Response:"
-    puts rpc("addHost", {"hostName" =>@hostname, "displayedAs" =>@hostname, "agentId" => @collector_id, "hostGroupIds" => group_list.to_s})
+    puts rpc("addHost", {"hostName" =>@hostname, "displayedAs" =>@display_name, "agentId" => @collector_id, "hostGroupIds" => group_list.to_s})
 
   end
 end
@@ -98,7 +98,7 @@ def rpc(action, args={})
   end
   url << "c=#{company}&u=#{username}&p=#{password}"
   #  puts(url)
-  uri = URI(URI.encode url)
+    uri = URI(URI.encode url)
   begin
     http = Net::HTTP.new(uri.host, 443)
     http.use_ssl = true
@@ -117,17 +117,19 @@ end
 
 def build_group_list(fullpaths, import_group_id, map)
   fullpathids = ""
-  path_array = fullpaths.split(":")
-  path_array.each do |path|
-    #Add dynamic group creation
-    #This might want to be a flag?
-    #if not group_name_id_map[path]
-    #create group here
-    #update group_name_map
-    #end
-    if map[path] #redundant check once dynamic group creation is added
-      fullpathids << map[path].to_s
-      fullpathids << ","
+  if not fullpaths.nil?
+    path_array = fullpaths.split(":")
+    path_array.each do |path|
+      #Add dynamic group creation
+      #This might want to be a flag?
+      #if not group_name_id_map[path]
+      #create group here
+      #update group_name_map
+      #end
+      if map[path] #redundant check once dynamic group creation is added
+        fullpathids << map[path].to_s
+        fullpathids << ","
+      end
     end
   end
   fullpathids << import_group_id.to_s
