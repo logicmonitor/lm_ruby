@@ -26,6 +26,7 @@ require 'net/http'
 require 'net/https'
 require 'optparse'
 require 'pp'
+require 'date'
 
 
 def main
@@ -35,76 +36,55 @@ def main
   filecontent = File.open(file)
   hostpaths = []
   @a = 0
-  rstring = ""
-  date = `date +"%Y%m%d%H%M%S"`
-  (groupname = "lmsupport-import-"+"#{date}").chomp!
+
+  #update date to use ruby date functions (make this platform agnostic)
+  # Currently this script can only be run on linux machines with a date command line function
+  #  date = `date +"%Y%m%d%H%M%S"`
+  #  date = Time.now.strftime "%Y%m%d%H%M%S"
+  #  groupname = "lmsupport-import-"+"#{date}".chomp
+  groupname = "lmsupport-import-#{Time.now.strftime "%Y%m%d%H%M%S"}".chomp
   rpc("addHostGroup", {"alertEnable" => false, "name" => groupname})
  
   string = rpc("getHostGroups") #makes API call to grab host group
   hostgroups= JSON.parse(string)
   my_arr=hostgroups['data']
-
+  
   group_name_id_map = Hash.new
   my_arr.each do |value|
     group_name_id_map[value["fullPath"]] = value["id"]
   end
 
-  lmgroupid = group_name_id_map[groupname]
-
-#  pp CSV.parse(filecontent)
-
-
+  lm_group_id = group_name_id_map[groupname]
   csv = CSV.new(filecontent, {:headers => true})
   
   csv.each do |row|
+    #Skip row in loop if the line is commented out (A.K.A. starts with a '#' character)
+    next if row[0].start_with?('#')
+
+    # validates presence of the hostname and collector id
+    # next update: validate all rows before updating the account
+    # give feedback on what lines/fields of the CSV will be problems
     if row["hostname"].nil? or row["collector_id"].nil?
       puts "Error: All hosts MUST have a valid hostname and collector ID"
       exit(1)
     end
     @hostname = row["hostname"]
-    @collector_id = row["collector_id"].
-    next if row[0].start_with?('#') #Skip row in loop if the line is commented out (A.K.A. starts with a '#' character)
-    
-    
-    
-    if (defined?(group_name_id_map[group_list].nil?))
-        groupid=group_name_id_map[row[3]]
-	      if (row[3].include?(":"))
-    	      row[3]=row[3].gsub(":"," ")
-            hostpaths = row[3].split
-       	   while @a < hostpaths.length
-            hgroups = group_name_id_map[hostpaths[@a]]
-            output = hgroups.to_s + "," 
-            rstring << output 
-            @a+=1
-            end #outputs all the hostgroup ids in a string
-       		 rstring=rstring.chomp(",")
-		if (row[2]!=nil) #if the displayname is not nil
-		puts "\n Host: " + row[1]
-	        puts rpc("addHost", {"hostName" =>row[1], "displayedAs" =>row[2], "agentId" => row[0], "hostGroupIds" => "#{rstring},#{lmgroupid}"})
-		else
-        	puts "\n Host: " + row[1]
-          	puts rpc("addHost", {"hostName" =>row[1], "displayedAs" =>row[1], "agentId" => row[0], "hostGroupIds" => "#{rstring},#{lmgroupid}"})
-        end
-		else
-		if (row[2]!=nil) #if the displayname is not nil
-		puts "\n Host: " + row[1]
-	        puts rpc("addHost", {"hostName" =>row[1], "displayedAs" =>row[2], "agentId" => row[0], "hostGroupIds" => "#{groupid},#{lmgroupid}"})
-		else
-        	puts "\n Host: " + row[1]
-         	puts rpc("addHost", {"hostName" =>row[1], "displayedAs" =>row[1], "agentId" => row[0], "hostGroupIds" => "#{groupid},#{lmgroupid}"})
-        end
-	  end
-        
-   else
-      if(row[2]!=nil) #if displayname is nil and there is no fullpath, just place it the lmsupport-import host group
-        puts "\n Host: " + row[1]
-        puts rpc("addHost", {"hostName" =>row[1], "displayedAs" =>row[2], "agentId" => row[0], "hostGroupIds" => "#{lmgroupid}"})
-      else
-        puts "\n Host: " + row[1]
-        puts rpc("addHost", {"hostName" =>row[1], "displayedAs" =>row[1], "agentId" => row[0], "hostGroupIds" => "#{lmgroupid}"})
-      end
+    @collector_id = row["collector_id"]
+
+    # check for a display_name
+    if row["display_name"].nil?
+      @display_name = @hostname
+    else
+      @display_name = row["display_name"]
     end
+    
+    # check for precense of a hostgroup and if there is, find the groupids 
+    group_list = build_group_list(row["group_list"], lm_group_id, group_name_id_map)
+
+    puts "Adding host #{@hostname} to LogicMonitor"
+    puts "RPC Response:"
+    puts rpc("addHost", {"hostName" =>@hostname, "displayedAs" =>@hostname, "agentId" => @collector_id, "hostGroupIds" => group_list.to_s})
+
   end
 end
 
@@ -117,7 +97,7 @@ def rpc(action, args={})
     url << "#{key}=#{value}&"
   end
   url << "c=#{company}&u=#{username}&p=#{password}"
-#  puts(url)
+  #  puts(url)
   uri = URI(URI.encode url)
   begin
     http = Net::HTTP.new(uri.host, 443)
@@ -134,6 +114,26 @@ def rpc(action, args={})
   end
   return nil
 end
+
+def build_group_list(fullpaths, import_group_id, map)
+  fullpathids = ""
+  path_array = fullpaths.split(":")
+  path_array.each do |path|
+    #Add dynamic group creation
+    #This might want to be a flag?
+    #if not group_name_id_map[path]
+    #create group here
+    #update group_name_map
+    #end
+    if map[path] #redundant check once dynamic group creation is added
+      fullpathids << map[path].to_s
+      fullpathids << ","
+    end
+  end
+  fullpathids << import_group_id.to_s
+  return fullpathids
+end
+
 
 ###################################################################
 #                                                                 #
