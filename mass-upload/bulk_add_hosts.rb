@@ -115,26 +115,92 @@ def rpc(action, args={})
   return nil
 end
 
+def group_id_map(fullpath)
+string = rpc("getHostGroups") #makes API call to grab host group
+  hostgroups= JSON.parse(string)
+  my_arr=hostgroups['data']
+
+  group_name_id_map = Hash.new
+  my_arr.each do |value|
+    group_name_id_map[value["fullPath"]] = value["id"]
+  end
+return group_name_id_map[fullpath]
+end
+
 def build_group_list(fullpaths, import_group_id, map)
-  fullpathids = ""
+fullpathids = ""
   if not fullpaths.nil?
     path_array = fullpaths.split(":")
     path_array.each do |path|
-      #Add dynamic group creation
-      #This might want to be a flag?
-      #if not group_name_id_map[path]
-      #create group here
-      #update group_name_map
-      #end
-      if map[path] #redundant check once dynamic group creation is added
+        if map[path] #redundant check once dynamic group creation is added
         fullpathids << map[path].to_s
         fullpathids << ","
-      end
+       else
+        recursive_group_create(path,true)
+        fullpathids << group_id_map(path).to_s
+        fullpathids << ","
     end
   end
+end
   fullpathids << import_group_id.to_s
   return fullpathids
 end
+
+def build_group_param_hash(fullpath, alertenable, parent_id)
+  path = fullpath.rpartition("/")
+  hash = {"name" => path[2]}
+  hash.store("parentId", parent_id)
+  hash.store("alertEnable", alertenable)
+  return hash
+end
+
+
+def recursive_group_create(fullpath, alertenable)
+  path = fullpath.rpartition("/")
+  parent_path = path[0]
+  puts("checking for parent: #{path[2]}")
+  parent_id = 1
+  if parent_path.nil? or parent_path.empty?
+    puts("highest level")
+  else
+    parent = get_group(parent_path)
+    if not parent.nil?
+      puts("parent group exists")
+      parent_id = parent["id"]
+    else
+      parent_ret = recursive_group_create(parent_path, true) #create parent group with basic information.
+      unless parent_ret.nil?
+        parent_id = parent_ret
+      end
+    end
+  end
+  hash = build_group_param_hash(fullpath, alertenable, parent_id)
+  resp_json = rpc("addHostGroup", hash)
+  resp = JSON.parse(resp_json)
+  if resp["data"].nil?
+    nil
+  else
+    resp["data"]["id"]
+  end
+end
+
+
+def get_group(fullpath)
+  returnval = nil
+  group_list = JSON.parse(rpc("getHostGroups", {}))
+  if group_list["data"].nil?
+    puts("Unable to retrieve list of host groups from LogicMonitor Account")
+    p group_list
+  else
+    group_list["data"].each do |group|
+      if group["fullPath"].eql?(fullpath.sub("/", ""))    #Check to see if group exists
+        returnval = group
+      end
+    end
+  end
+  returnval
+end
+
 
 
 ###################################################################
