@@ -70,7 +70,8 @@ def main
     end
     @hostname = row["hostname"]
     @collector_id = row["collector_id"]
-
+    @description = row["description"]
+    @properties = row["properties"]
     # check for a display_name
     if row["display_name"].nil?
       @display_name = @hostname
@@ -80,12 +81,16 @@ def main
     
     # check for precense of a hostgroup and if there is, find the groupids 
     group_list = build_group_list(row["group_list"], lm_group_id, group_name_id_map)
-
+    
     puts "Adding host #{@hostname} to LogicMonitor"
     puts "RPC Response:"
-    puts rpc("addHost", {"hostName" =>@hostname, "displayedAs" =>@display_name, "agentId" => @collector_id, "hostGroupIds" => group_list.to_s})
+if @description.nil?
+    puts rpc("addHost", {"hostName" =>@hostname, "displayedAs" =>@display_name, "agentId" => @collector_id, "hostGroupIds" => group_list.to_s})  
+else
+    puts rpc("addHost", {"hostName" =>@hostname, "displayedAs" =>@display_name, "agentId" => @collector_id, "hostGroupIds" => group_list.to_s, "description" => @description})
+end
 
-  end
+end
 end
 
 def rpc(action, args={})
@@ -200,8 +205,6 @@ def get_group(fullpath)
   end
   returnval
 end
-
-
 
 ###################################################################
 #                                                                 #
