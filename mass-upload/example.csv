@@ -1,7 +1,7 @@
 collector_id,hostname,display_name,group_list,description,properties
-9,localhost,localhost,Netapp:Vcenter/ESX Hosts,thehostislocal,
-9,10.0.1.123,testhost,Networking/Routers:Vcenter/ESX Hosts,testing spaces,
-9,10.1.0.3,host-12,Production:Networking/Routers:Vcenter/ESX Hosts,wazzuppunk,
+9,localhost,localhost,Netapp:Vcenter/ESX Hosts,thehostislocal,cim.user=hello
+9,10.0.1.123,testhost,Networking/Routers:Vcenter/ESX Hosts,testing spaces
+9,10.1.0.3,host-12,Production:Networking/Routers:Vcenter/ESX Hosts,wazzup,cim.user=pyang:cim.pass=world
 #9,10.2.3.4,host-aa,Vcenter:Netapp
 #9,10.2.1.3,host-13,Netapp:Networking/Switches
 #9,192.168.1.2,host-01,Vcenter/ESX Hosts

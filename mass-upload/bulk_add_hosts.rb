@@ -82,14 +82,16 @@ def main
     # check for precense of a hostgroup and if there is, find the groupids 
     group_list = build_group_list(row["group_list"], lm_group_id, group_name_id_map)
     
+    # check if properties are nil
+
     puts "Adding host #{@hostname} to LogicMonitor"
     puts "RPC Response:"
+
 if @description.nil?
     puts rpc("addHost", {"hostName" =>@hostname, "displayedAs" =>@display_name, "agentId" => @collector_id, "hostGroupIds" => group_list.to_s})  
 else
     puts rpc("addHost", {"hostName" =>@hostname, "displayedAs" =>@display_name, "agentId" => @collector_id, "hostGroupIds" => group_list.to_s, "description" => @description})
 end
-
 end
 end
 
@@ -100,8 +102,10 @@ def rpc(action, args={})
   url = "https://#{company}.logicmonitor.com/santaba/rpc/#{action}?"
   args.each_pair do |key, value|
     url << "#{key}=#{value}&"
-  end
-  url << "c=#{company}&u=#{username}&p=#{password}"
+  end 
+  url << "c=#{company}&u=#{username}&p=#{password}&"
+  url << get_properties(@properties).to_s
+
   #  puts(url)
     uri = URI(URI.encode url)
   begin
@@ -189,6 +193,21 @@ def recursive_group_create(fullpath, alertenable)
   end
 end
 
+def get_properties(properties)
+    propindex=""
+    if not @properties.nil?
+    props = @properties.split(":")
+    index = 0
+    props.each do |p|
+    eachProp = p.split("=")
+    key = eachProp[0]
+    value = eachProp[1]
+    propindex << "propName#{index}=#{key}&propValue#{index}=#{value}&"
+    index = index + 1
+    end
+    @propindex=propindex.chomp("&")
+    end
+end
 
 def get_group(fullpath)
   returnval = nil
