@@ -29,60 +29,32 @@ require 'optparse'
 require 'pp'
 require 'date'
 
+GLOBAL_GROUP_ID = 1
+
 def main
-  id    = []
-  names = []
-  descriptions = []
-  collectorID = []
-  hostpaths = []
-  hostnames = []
-  properties = []
-  @a = 0
-  @b = 0  
-  @c = 0
-CSV.open("#{@file}", "w") do |csv|
-  csv << ["collector_id","hostname","display_name","group_list","description","properties"]
-  string = rpc("getHostGroups") #makes API call to grab host group
-  hostgroups= JSON.parse(string)
-  my_arr=hostgroups['data']
-  my_arr.each do |value|
-  id = id.push("1")#to get the ids from root
-  id = id.push(value["id"])
- end
- while @a < id.size 
-  hostids = rpc("getHosts",{"hostGroupId"=>id[@a]})
-  hosts = JSON.parse(hostids)
-  h_ids = hosts["data"]["hosts"]
-  h_ids.each do |values|
-  names = names.push(values["displayedAs"])
+
+  CSV.open("#{@file}", "w") do |csv|
+    #write header row to CSV object
+    csv << ["collector_id","hostname","display_name","group_list","description","properties"]
+    hosts_response = rpc("getHosts",{"hostGroupId"=>GLOBAL_GROUP_ID})
+    hosts_json = JSON.parse(hosts_response)
+    host_list = hosts_json["data"]["hosts"]
+    host_list.each do |host|
+      host_props_resp = rpc("getHostProperties", {"hostId" => host["id"], "filterSystemProperties" => "true"})
+      host_props = JSON.parse(host_props_resp)
+      properties = ""
+      host_props["data"].each do |prop_hash|
+        unless prop_hash["name"].eql?("snmp.version") or prop_hash["value"].include? "********" or prop_hash["value"].empty?
+          unless properties.eql? ""
+            properties << ":"
+          end
+          properties << prop_hash["name"] + "=" + prop_hash["value"]
+        end
+      end
+      csv << [host["agentId"], host["hostName"], host["displayedAs"], host["properties"]["system.groups"].gsub(",",":"), host["description"], properties]
+    end
+
   end
-  @a=@a+1
-  end
-  names = names.uniq #gets all the display names of the hosts in the account
-
-while @b < names.size
-hostsInfo = rpc("getHost",{"displayName"=>names[@b]})
-host_info = JSON.parse(hostsInfo)
-collectorID = collectorID.push(host_info["data"]["agentId"])
-descriptions = descriptions.push(host_info["data"]["description"])
-hostpaths=hostpaths.push(host_info["data"]["properties"]["system.groups"].gsub(",",":"))
-hostnames=hostnames.push(host_info["data"]["hostName"])
-
-host_info["data"]["properties"].each do |f|
-if not (f[0].include?("system"))
-properties[@b]=properties.push("#{f[0]}=#{f[1]}")  
-properties.compact
-end
-end
-@b+=1
-end
-
-
-while @c < names.size
-csv << [collectorID[@c],hostnames[@c],names[@c],hostpaths[@c],descriptions[@c],properties[@c]]
-@c=@c+1
-end
-end
 end
 
 def rpc(action, args={})
