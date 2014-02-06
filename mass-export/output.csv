@@ -1,0 +1,9 @@
+collector_id,hostname,display_name,group_list,description,properties
+9,192.168.1.2,host-01,Vcenter/ESX Hosts,"","[[...], [...], ""jdbc.mysql.pass=********"", ""jdbc.mysql.user=Perry"", ""cim.pass=********"", [...], [...], ""cim.user=hello""]"
+9,192.123.1.5,host-test,"","","[[...], [...], ""jdbc.mysql.pass=********"", ""jdbc.mysql.user=Perry"", ""cim.pass=********"", [...], [...], ""cim.user=hello""]"
+9,10.2.3.4,host-aa,Vcenter:Netapp,"",jdbc.mysql.pass=********
+9,10.2.1.3,host-13,Netapp:Networking/Switches,"",jdbc.mysql.user=Perry
+9,10.0.1.123,testhost,Vcenter/ESX Hosts:Networking/Routers,testing spaces,cim.pass=********
+9,10.1.0.3,host-12,Vcenter/ESX Hosts:Networking/Routers:Production,wazzup,"[[...], [...], ""jdbc.mysql.pass=********"", ""jdbc.mysql.user=Perry"", ""cim.pass=********"", [...], [...], ""cim.user=hello""]"
+9,localhost,localhost,Vcenter/ESX Hosts:Netapp,thehostislocal,"[[...], [...], ""jdbc.mysql.pass=********"", ""jdbc.mysql.user=Perry"", ""cim.pass=********"", [...], [...], ""cim.user=hello""]"
+9,10.2.3.2,host3,Networking/Switches,"",cim.user=hello
