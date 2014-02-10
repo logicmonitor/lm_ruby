@@ -1,4 +1,4 @@
-# bulk_add_hosts.rb
+# bulk__export_hosts.rb
 #
 # This is a ruby script to handle the mass host imports
 #
