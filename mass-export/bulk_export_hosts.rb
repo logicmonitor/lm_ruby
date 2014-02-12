@@ -44,7 +44,7 @@ def main
       host_props = JSON.parse(host_props_resp)
       properties = ""
       host_props["data"].each do |prop_hash|
-        unless prop_hash["name"].eql?("snmp.version") or prop_hash["value"].include? "********" or prop_hash["value"].empty?
+        unless prop_hash["name"].eql?("snmp.version") or prop_hash["value"].empty?
           unless properties.eql? ""
             properties << ":"
           end
