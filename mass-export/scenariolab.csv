@@ -1,0 +1,27 @@
+collector_id,hostname,display_name,group_list,description,properties
+1,dev13.dc7.logicmonitor.net,dev13.dc7.logicmonitor.net,Servers:Dev,"",snmp.community=********
+1,dev11.dc7.logicmonitor.net,dev11.dc7.logicmonitor.net,Servers:Dev,"",""
+1,prod10.dc7.logicmonitor.net,prod10.dc7.logicmonitor.net,Servers:Prod,"",""
+3,10.0.1.251,Powercycler,SB,"",snmp.community=********
+3,10.0.1.250,10.0.1.250,SB,"","bogus.mcbogus=bobo, booboo:snmp.community=********:device.type=3745-router"
+3,10.0.1.252,10.0.1.252,SB,"",snmp.community=********:device.type=3745-router
+3,10.0.1.15,10.0.1.15,Servers:windows,"",""
+5,10.0.1.222,10.0.1.222,SB,"",system.categories=test
+5,10.0.1.86,Linux with collector,Servers,"",system.categories=collector
+5,10.0.1.210,10.0.1.210,SB/ESX,"",esx.pass=********:esx.user=logicmonitor
+5,10.0.1.132,labfiler01,"",NetApp Simulator 7-mode (not clustered),netapp.pass=********:snmp.community=********:netapp.user=logicmonitor
+3,host1,host1,Prod,Discovered by agent 3 via NSP allyTestScript,""
+5,10.0.1.140,NetAppClusterManagement,SB,Cluster Mode netapp management port,netapp.pass=********:netapp.user=logicmonitor
+5,10.0.1.141,NetAppNode1,SB,"",""
+5,api.sumologic.com,api.sumologic.com,"",sumo's API endpoint,http.user=mike@logicmonitor.com:http.pass=********
+5,10.0.1.61,HPCloset,"","",""
+7,10.0.0.45,Celerra VSA 6.0.36.4 - UBERv3.2,Servers:EMC SAN,"",cim.port=5988:cim.pass=********:snmp.community=********:cim.user=nasadmin
+3,10.0.1.142,NetAppNode2,SB,"",""
+5,10.0.1.170,vyatta soft router,"","",""
+3,10.0.0.2,cisco_other_ip,SB,"",snmp.community=********
+3,10.0.1.9,10.0.1.9,"","",""
+8,10.0.1.137,10.0.1.137,Servers:windows,"",""
+5,10.0.1.251,Powercycler_alternate_displayname,SB,"",snmp.community=********
+9,skuppej-lm,skuppej-lm,Servers:SB:windows,"",wmi.pass=********:wmi.user=Joseph
+9,scenario-vm-2k8,scenario-vm-2k8,Servers:SB/ESX:windows,"",""
+9,scenario-vm-2k12,scenario-vm-2k12,Servers:windows,"",""

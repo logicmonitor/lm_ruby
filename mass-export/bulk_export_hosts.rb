@@ -40,6 +40,7 @@ def main
     hosts_json = JSON.parse(hosts_response)
     host_list = hosts_json["data"]["hosts"]
     host_list.each do |host|
+      sleep(1.0/100.0)
       host_props_resp = rpc("getHostProperties", {"hostId" => host["id"], "filterSystemProperties" => "true"})
       host_props = JSON.parse(host_props_resp)
       properties = ""
