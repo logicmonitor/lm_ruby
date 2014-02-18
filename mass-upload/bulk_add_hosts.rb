@@ -217,7 +217,9 @@ def get_group(fullpath)
     p group_list
   else
     group_list["data"].each do |group|
-      if group["fullPath"].eql?(fullpath.sub("/", ""))    #Check to see if group exists
+      # Check to see if group exists.  Remove leading '/'
+      # in case it's part of the group column in the csv.
+      if group["fullPath"].eql?(fullpath.sub(/^\//, ""))
         returnval = group
       end
     end
