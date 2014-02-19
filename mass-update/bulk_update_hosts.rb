@@ -59,6 +59,7 @@ def main
   
   csv.each do |row|
     #Skip row in loop if the line is commented out (A.K.A. starts with a '#' character)
+    sleep(1.0/100.0)
     next if row[0].start_with?('#')
 
     # validates presence of the hostname and collector id
@@ -212,7 +213,7 @@ def get_group(fullpath)
     p group_list
   else
     group_list["data"].each do |group|
-      if group["fullPath"].eql?(fullpath.sub("/", ""))    #Check to see if group exists
+      if group["fullPath"].eql?(fullpath.sub(/^\//, ""))    #Check to see if group exists
         returnval = group
       end
     end

@@ -61,12 +61,13 @@ end
 def rpc(action, args={})
   company = @company
   username = @user
-  password = @password
+  password = "Kubg&N{UlQ8cJ5k" 
+  test = URI(URI.encode password)
   url = "https://#{company}.logicmonitor.com/santaba/rpc/#{action}?"
   args.each_pair do |key, value|
     url << "#{key}=#{value}&"
   end
-  url << "c=#{company}&u=#{username}&p=#{password}&"
+  url << "c=#{company}&u=#{username}&p=#{test}&"
     uri = URI(URI.encode url)
   begin
     http = Net::HTTP.new(uri.host, 443)
@@ -131,12 +132,12 @@ rescue  OptionParser::MissingArgument => ma
   opt_error = true
 end  
 
-begin
-  raise OptionParser::MissingArgument if @options[:password].nil?
-rescue  OptionParser::MissingArgument => ma
-  puts "Missing option: -p <password>"
-  opt_error = true
-end  
+#begin
+#  raise OptionParser::MissingArgument if @options[:password].nil?
+#rescue  OptionParser::MissingArgument => ma
+#  puts "Missing option: -p <password>"
+#  opt_error = true
+#end  
 
 begin
   raise OptionParser::MissingArgument if @options[:file].nil?
@@ -152,6 +153,6 @@ end
 #required inputs
 @company = @options[:company]
 @user = @options[:user]
-@password = @options[:password]
+#@password = @options[:password]
 @file = @options[:file]
 main()
