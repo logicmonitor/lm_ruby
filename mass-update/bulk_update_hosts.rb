@@ -43,17 +43,17 @@ def main
   #  date = Time.now.strftime "%Y%m%d%H%M%S"
   #  groupname = "lmsupport-import-"+"#{date}".chomp
   groupname = "lmsupport-import-#{Time.now.strftime "%Y%m%d%H%M%S"}".chomp
-
- 
   string = rpc("getHostGroups") #makes API call to grab host group
   hostgroups= JSON.parse(string)
   my_arr=hostgroups['data']
   
   group_name_id_map = Hash.new
-  my_arr.each do |value|
-    group_name_id_map[value["fullPath"]] = value["id"]
+  my_arr.each do |value| 
+  if value["appliesTo"].eql?""
+     group_name_id_map[value["fullPath"]] = value["id"]
   end
-
+  end
+      
   lm_group_id = group_name_id_map[groupname]
   csv = CSV.new(filecontent, {:headers => true})
   
@@ -86,7 +86,9 @@ def main
  
     # check for precense of a hostgroup and if there is, find the groupids 
     group_list = build_group_list(row["group_list"], "", group_name_id_map)
-    
+        
+
+ 
     puts "Updating host #{@hostname} to LogicMonitor"
     puts "RPC Response:"
     puts rpc("updateHost", {"hostName" =>@hostname, "id" => @hostId, "displayedAs" =>@display_name, "agentId" => @collector_id, "hostGroupIds" => group_list.to_s, "description" => @description})
@@ -127,8 +129,12 @@ string = rpc("getHostGroups") #makes API call to grab host group
 
   group_name_id_map = Hash.new
   my_arr.each do |value|
-    group_name_id_map[value["fullPath"]] = value["id"]
+  if value["appliesTo"].eql?""
+     group_name_id_map[value["fullPath"]] = value["id"]
   end
+  end
+  
+  
 return group_name_id_map[fullpath]
 end
 
