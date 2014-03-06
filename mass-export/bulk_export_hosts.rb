@@ -61,7 +61,7 @@ end
 def rpc(action, args={})
   company = @company
   username = @user
-  password = "Kubg&N{UlQ8cJ5k" 
+  password = @password 
   test = URI(URI.encode password)
   url = "https://#{company}.logicmonitor.com/santaba/rpc/#{action}?"
   args.each_pair do |key, value|
@@ -153,6 +153,6 @@ end
 #required inputs
 @company = @options[:company]
 @user = @options[:user]
-#@password = @options[:password]
+@password = @options[:password]
 @file = @options[:file]
 main()
