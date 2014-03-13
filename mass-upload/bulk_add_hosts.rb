@@ -48,7 +48,6 @@ def main
   string = rpc("getHostGroups") #makes API call to grab host group
   hostgroups= JSON.parse(string)
   my_arr=hostgroups['data']
-  
   group_name_id_map = Hash.new
   my_arr.each do |value|
     group_name_id_map[value["fullPath"]] = value["id"]
