@@ -1,4 +1,4 @@
-# bulk__export_hosts.rb
+#bulk__export_hosts.rb
 #
 # This is a ruby script to handle the mass host imports
 #
@@ -67,7 +67,7 @@ def rpc(action, args={})
   args.each_pair do |key, value|
     url << "#{key}=#{value}&"
   end
-  url << "c=#{company}&u=#{username}&p=#{test}&"
+  url << "c=#{company}&u=#{username}&p=#{password}&"
     uri = URI(URI.encode url)
   begin
     http = Net::HTTP.new(uri.host, 443)
