@@ -30,12 +30,8 @@ require 'date'
 
 GLOBAL_GROUP_ID =1
 def main
-  id    = []
-  names = []
   file  = @file
   filecontent = File.open(file)
-  hostpaths = []
-  @a = 0
 
   #update date to use ruby date functions (make this platform agnostic)
   # Currently this script can only be run on linux machines with a date command line function
@@ -49,9 +45,9 @@ def main
   
   group_name_id_map = Hash.new
   my_arr.each do |value| 
-  if value["appliesTo"].eql?""
-     group_name_id_map[value["fullPath"]] = value["id"]
-  end
+    if value["appliesTo"].eql?""
+      group_name_id_map[value["fullPath"]] = value["id"]
+    end
   end
       
   lm_group_id = group_name_id_map[groupname]
@@ -79,9 +75,9 @@ def main
     hosts_json = JSON.parse(hosts_response)
     host_list = hosts_json["data"]["hosts"]
     host_list.each do |host|
-    if (host["hostName"].eql?@hostname and host["agentId"].to_s.eql?@collector_id) or host["displayedAs"].eql?@display_name
-	@hostId = host["id"]
-    end
+      if (host["hostName"].eql?@hostname and host["agentId"].to_s.eql?@collector_id) or host["displayedAs"].eql?@display_name
+        @hostId = host["id"]
+      end
     end   
  
     # check for precense of a hostgroup and if there is, find the groupids 
@@ -92,7 +88,7 @@ def main
     puts "Updating host #{@hostname} to LogicMonitor"
     puts "RPC Response:"
     puts rpc("updateHost", {"hostName" =>@hostname, "id" => @hostId, "displayedAs" =>@display_name, "agentId" => @collector_id, "hostGroupIds" => group_list.to_s, "description" => @description})
-end
+  end
 end
 
 def rpc(action, args={})
@@ -105,7 +101,7 @@ def rpc(action, args={})
   end 
   url << "c=#{company}&u=#{username}&p=#{password}&"
   url << get_properties(@properties).to_s
-    uri = URI(URI.encode url)
+  uri = URI(URI.encode url)
   begin
     http = Net::HTTP.new(uri.host, 443)
     http.use_ssl = true
@@ -123,36 +119,34 @@ def rpc(action, args={})
 end
 
 def group_id_map(fullpath)
-string = rpc("getHostGroups") #makes API call to grab host group
+  string = rpc("getHostGroups") #makes API call to grab host group
   hostgroups= JSON.parse(string)
   my_arr=hostgroups['data']
 
   group_name_id_map = Hash.new
   my_arr.each do |value|
-  if value["appliesTo"].eql?""
-     group_name_id_map[value["fullPath"]] = value["id"]
+    if value["appliesTo"].eql?""
+      group_name_id_map[value["fullPath"]] = value["id"]
+    end
   end
-  end
-  
-  
-return group_name_id_map[fullpath]
+  return group_name_id_map[fullpath]
 end
 
 def build_group_list(fullpaths, import_group_id, map)
-fullpathids = ""
+  fullpathids = ""
   if not fullpaths.nil?
     path_array = fullpaths.split(":")
     path_array.each do |path|
-        if map[path] #redundant check once dynamic group creation is added
+      if map[path] #redundant check once dynamic group creation is added
         fullpathids << map[path].to_s
         fullpathids << ","
-       else
+      else
         recursive_group_create(path,true)
         fullpathids << group_id_map(path).to_s
         fullpathids << ","
+      end
     end
   end
-end
  
   return fullpathids
 end
@@ -196,19 +190,19 @@ def recursive_group_create(fullpath, alertenable)
 end
 
 def get_properties(properties)
-    propindex=""
-    if not @properties.nil?
+  propindex=""
+  if not @properties.nil?
     props = @properties.split(":")
     index = 0
     props.each do |p|
-    eachProp = p.split("=")
-    key = eachProp[0]
-    value = eachProp[1]
-    propindex << "propName#{index}=#{key}&propValue#{index}=#{value}&"
-    index = index + 1
+      eachProp = p.split("=")
+      key = eachProp[0]
+      value = eachProp[1]
+      propindex << "propName#{index}=#{key}&propValue#{index}=#{value}&"
+      index = index + 1
     end
     @propindex=propindex.chomp("&")
-    end
+  end
 end
 
 def get_group(fullpath)
@@ -261,15 +255,15 @@ begin
     
   end.parse!
 rescue OptionParser::MissingArgument => ma
-   puts ma.inspect
-   opt_error = true
+  puts ma.inspect
+  opt_error = true
 end  
 
 begin
   raise OptionParser::MissingArgument if @options[:company].nil?
 rescue  OptionParser::MissingArgument => ma
   puts "Missing option: -c <company>"
-   opt_error = true
+  opt_error = true
 end  
 
 begin

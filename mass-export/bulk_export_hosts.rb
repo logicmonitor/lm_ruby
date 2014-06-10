@@ -86,7 +86,7 @@ def rpc(action, args={})
 end
 
 
-pt_error = false
+opt_error = false
 begin
   @options = {}
   OptionParser.new do |opts|
