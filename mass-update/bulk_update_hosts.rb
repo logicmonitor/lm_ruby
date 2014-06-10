@@ -33,11 +33,6 @@ def main
   file  = @file
   filecontent = File.open(file)
 
-  #update date to use ruby date functions (make this platform agnostic)
-  # Currently this script can only be run on linux machines with a date command line function
-  #  date = `date +"%Y%m%d%H%M%S"`
-  #  date = Time.now.strftime "%Y%m%d%H%M%S"
-  #  groupname = "lmsupport-import-"+"#{date}".chomp
   groupname = "lmsupport-import-#{Time.now.strftime "%Y%m%d%H%M%S"}".chomp
   string = rpc("getHostGroups") #makes API call to grab host group
   hostgroups= JSON.parse(string)
