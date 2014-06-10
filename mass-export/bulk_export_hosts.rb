@@ -132,12 +132,12 @@ rescue  OptionParser::MissingArgument => ma
   opt_error = true
 end  
 
-#begin
-#  raise OptionParser::MissingArgument if @options[:password].nil?
-#rescue  OptionParser::MissingArgument => ma
-#  puts "Missing option: -p <password>"
-#  opt_error = true
-#end  
+begin
+  raise OptionParser::MissingArgument if @options[:password].nil?
+rescue  OptionParser::MissingArgument => ma
+  puts "Missing option: -p <password>"
+  opt_error = true
+end  
 
 begin
   raise OptionParser::MissingArgument if @options[:file].nil?
