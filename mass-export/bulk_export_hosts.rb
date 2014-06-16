@@ -32,7 +32,9 @@ require 'date'
 GLOBAL_GROUP_ID = 1
 
 def main
-
+ string = rpc("getHostGroups") #dummy call to check if there is an error to throw the message below
+  if string.include? "403"
+  puts "Status:403 Authentication failed. Check the url, username, and password"  else
   CSV.open("#{@file}", "w") do |csv|
     #write header row to CSV object
     csv << ["collector_id","hostname","display_name","group_list","description","properties"]
@@ -57,7 +59,7 @@ def main
 
   end
 end
-
+end
 def rpc(action, args={})
   company = @company
   username = @user

@@ -35,9 +35,11 @@ def main
 
   groupname = "lmsupport-import-#{Time.now.strftime "%Y%m%d%H%M%S"}".chomp
   string = rpc("getHostGroups") #makes API call to grab host group
+  if string.include? "403"
+  puts "Status:403 Authentication failed. Check the url, username, and password"  else
   hostgroups= JSON.parse(string)
   my_arr=hostgroups['data']
-  
+ 
   group_name_id_map = Hash.new
   my_arr.each do |value| 
     if value["appliesTo"].eql?""
@@ -85,7 +87,7 @@ def main
     puts rpc("updateHost", {"hostName" =>@hostname, "id" => @hostId, "displayedAs" =>@display_name, "agentId" => @collector_id, "hostGroupIds" => group_list.to_s, "description" => @description})
   end
 end
-
+end
 def rpc(action, args={})
   company = @company
   username = @user
