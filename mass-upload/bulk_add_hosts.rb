@@ -37,6 +37,8 @@ def main
   rpc("addHostGroup", {"alertEnable" => false, "name" => groupname})
  
   string = rpc("getHostGroups") #makes API call to grab host group
+  if string.include? "403"
+  puts "Status:403 Authentication failed. Check the url, username, and password"  else
   hostgroups= JSON.parse(string)
   my_arr=hostgroups['data']
   group_name_id_map = Hash.new
@@ -84,7 +86,7 @@ def main
     end
   end
 end
-
+end
 def rpc(action, args={})
   company = @company
   username = @user
