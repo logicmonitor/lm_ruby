@@ -28,27 +28,29 @@ require 'optparse'
 require 'pp'
 require 'date'
 
-
+GLOBAL_GROUP_ID =1
 def main
   file  = @file
   filecontent = File.open(file)
 
   groupname = "lmsupport-import-#{Time.now.strftime "%Y%m%d%H%M%S"}".chomp
-  rpc("addHostGroup", {"alertEnable" => false, "name" => groupname})
- 
   string = rpc("getHostGroups") #makes API call to grab host group
   hostgroups= JSON.parse(string)
   my_arr=hostgroups['data']
+  
   group_name_id_map = Hash.new
-  my_arr.each do |value|
-    group_name_id_map[value["fullPath"]] = value["id"]
+  my_arr.each do |value| 
+    if value["appliesTo"].eql?""
+      group_name_id_map[value["fullPath"]] = value["id"]
+    end
   end
-
+      
   lm_group_id = group_name_id_map[groupname]
   csv = CSV.new(filecontent, {:headers => true})
   
   csv.each do |row|
     #Skip row in loop if the line is commented out (A.K.A. starts with a '#' character)
+    sleep(1.0/100.0)
     next if row[0].start_with?('#')
 
     # validates presence of the hostname and collector id
@@ -62,26 +64,25 @@ def main
     @collector_id = row["collector_id"]
     @description = row["description"]
     @properties = row["properties"]
-    # check for a display_name
-    if row["display_name"].nil?
-      @display_name = @hostname
-    else
-      @display_name = row["display_name"]
-    end
-    
+    @display_name = row["display_name"]
+
+    hosts_response = rpc("getHosts",{"hostGroupId"=>GLOBAL_GROUP_ID})
+    hosts_json = JSON.parse(hosts_response)
+    host_list = hosts_json["data"]["hosts"]
+    host_list.each do |host|
+      if (host["hostName"].eql?@hostname and host["agentId"].to_s.eql?@collector_id) or host["displayedAs"].eql?@display_name
+        @hostId = host["id"]
+      end
+    end   
+ 
     # check for precense of a hostgroup and if there is, find the groupids 
-    group_list = build_group_list(row["group_list"], lm_group_id, group_name_id_map)
-    
-    # check if properties are nil
+    group_list = build_group_list(row["group_list"], "", group_name_id_map)
+        
 
-    puts "Adding host #{@hostname} to LogicMonitor"
+ 
+    puts "Updating host #{@hostname} to LogicMonitor"
     puts "RPC Response:"
-
-    if @description.nil?
-      puts rpc("addHost", {"hostName" =>@hostname, "displayedAs" =>@display_name, "agentId" => @collector_id, "hostGroupIds" => group_list.to_s})  
-    else
-      puts rpc("addHost", {"hostName" =>@hostname, "displayedAs" =>@display_name, "agentId" => @collector_id, "hostGroupIds" => group_list.to_s, "description" => @description})
-    end
+    puts rpc("updateHost", {"hostName" =>@hostname, "id" => @hostId, "displayedAs" =>@display_name, "agentId" => @collector_id, "hostGroupIds" => group_list.to_s, "description" => @description})
   end
 end
 
@@ -95,7 +96,6 @@ def rpc(action, args={})
   end 
   url << "c=#{company}&u=#{username}&p=#{password}&"
   url << get_properties(@properties).to_s
-
   uri = URI(URI.encode url)
   begin
     http = Net::HTTP.new(uri.host, 443)
@@ -120,7 +120,9 @@ def group_id_map(fullpath)
 
   group_name_id_map = Hash.new
   my_arr.each do |value|
-    group_name_id_map[value["fullPath"]] = value["id"]
+    if value["appliesTo"].eql?""
+      group_name_id_map[value["fullPath"]] = value["id"]
+    end
   end
   return group_name_id_map[fullpath]
 end
@@ -140,7 +142,7 @@ def build_group_list(fullpaths, import_group_id, map)
       end
     end
   end
-  fullpathids << import_group_id.to_s
+ 
   return fullpathids
 end
 

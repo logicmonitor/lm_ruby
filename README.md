@@ -126,7 +126,7 @@ Usage: sdt_host.rb -c <company> -u <user> -p <password> -H <hostname> [-C <colle
 ```
 
  
-###mass-upload/bulk_add_hosts.rb
+###mass-upload/bulk_add_hosts.rb 
 This script parses a CSV formated list of hosts and adds them to monitoring.
 
 ```
@@ -142,4 +142,32 @@ Usage: ruby bulk_add_hosts.rb -c <company> -u <user> -p <password> -f <file>
 We have provided a sample CSV file [example.csv](/mass-upload/example.csv) to show the required set and order of the columns. This script currently requires any host groups specified in the script to already exist in the account.
 To make sure that bulk_add_hosts can read the CSV file, you need to specify either the full path to the CSV file OR the relative path from the current working directory.
 
+###mass-export/bulk_export_hosts.rb
+This scipt exports all of your hosts into a CSV file 
 
+```
+$> ruby bulk_export_hosts.rb -h
+Usage: ruby bulk_add_hosts.rb -c <company> -u <user> -p <password> -f <file>
+    -d, --debug                      Turn on debug print statements
+    -c, --company COMPANY            LogicMonitor Account
+    -u, --user USERNAME              LogicMonitor user name
+    -p, --password PASSWORD          LogicMonitor password
+    -f, --file FILE                  The CSV file that willl be created containing your host export information
+```
+
+Best practice would be to run the host export script if you were to do a bulk update on multiple hosts. This ensures that you have the properly formatted CSV file and will make the multi-host update much quicker and easier.
+
+###mass-update/bulk_update_hosts.rb
+This script parses a CSV formated list of hosts updates the exists host according to the information provided in the CSV.
+
+```
+$> ruby bulk_update_hosts.rb -h
+Usage: ruby bulk_add_hosts.rb -c <company> -u <user> -p <password> -f <file>
+    -d, --debug                      Turn on debug print statements
+    -c, --company COMPANY            LogicMonitor Account
+    -u, --user USERNAME              LogicMonitor user name
+    -p, --password PASSWORD          LogicMonitor password
+    -f, --file FILE                  A CSV file contaning the hosts to be updated.
+```
+
+This will not work with hosts that do not already exist. A working update will probably be to add the host if they could not find this host and apply the settings. However, if the script fails out, the first step would be check if all the hosts in the CSV all exist
