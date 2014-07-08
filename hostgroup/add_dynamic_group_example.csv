@@ -1,5 +1,2 @@
-dgroupname,appliesTo,parentid,description
-dgroup1,system.displayname=="SamMacbook",,
-dgroup2,system.displayname=="SamDesktop",3,
-dgroup3,system.displayname=="SamVM1",10,testdescription1
-dgroup4,system.displayname=="SamVM2",11,testdescription2
+dgroupname,appliesTo,parentid,description,properties
+dgroup7,system.displayname=="SamMacbook",,testnullpid,samis=awesome:perryis=alsook:ethanis=coolerthanus

@@ -33,7 +33,25 @@ require 'date'
 
 def main
 
+  
+
+
+  string = rpc("getHostGroups")
+  hgs = JSON.parse(string)
+  my_arr = hgs['data']
+
+  id_arr = Array.new
+  my_arr.each do |value|
+    idval = value['id']
+    id_arr.push(idval)
+  end
+
+  #puts id_arr
+
   file = @file
+  #this part is actually awesome. CSV doesn't allow quoting that doesn't encapsulate an entire column/row thingy.
+  #in order to allow quoting in an appliesTo (which is pretty common), we make the quote_character of the csv object
+  #a character that doesn't appear in our csv (hopefully)
   csv = CSV.open(file, quote_char: "\x00", :headers => true)
 
   #csv = CSV.new(filecontent, {:headers => true})
@@ -49,37 +67,38 @@ def main
       puts "Error: All hosts MUST have a valid hostname and collector ID"
       exit(1)
     end
+
+    #set instance variables to the value of the row
     @dgroupname = row["dgroupname"]
     @appliesTo = row["appliesTo"]
     @parentid = row["parentid"]
-    @description = row["description"]
+    @description = row["description"] 
+    @properties = row["properties"] 
 
-    puts @appliesTo
-
-    #url encode the appliesTo
-    #@appliesTo = URI(URI.encode @appliesTo)
-            
-    puts "Adding Dynamic Group #{@dgroupname} to LogicMonitor"
     puts
+    puts "Adding Dynamic Group #{@dgroupname} to LogicMonitor"
     puts "RPC Response:"
     puts
-    # check if optional properties are nil before adding
-    if @description.nil?
-      if @parentid.nil?
-        puts rpc("addHostGroup", {"alertEnable" => false, "dGroup" => true, "name" => @dgroupname, "appliesTo" => @appliesTo})
-      else
+
+    #parentId should default to one (root group) if nothing is passed in for that value
+    if @parentid.nil?
+      @parentid = 1
+    end
+
+    #check if parentId exists in current host groups or is root group
+    #this is to validate that an accurate parentId was passed into the csv
+    if id_arr.include?(@parentid.to_i) || @parentid == 1
+      #check if description is nil before adding
+      if @description.nil?
         puts rpc("addHostGroup", {"alertEnable" => false, "dGroup" => true, "name" => @dgroupname, "appliesTo" => @appliesTo, "parentId" => @parentid})
-      end
-    else
-      if @parentid.nil?
-        puts rpc("addHostGroup", {"alertEnable" => false, "dGroup" => true, "name" => @dgroupname, "appliesTo" => @appliesTo, "description" => @description})
       else
         puts rpc("addHostGroup", {"alertEnable" => false, "dGroup" => true, "name" => @dgroupname, "appliesTo" => @appliesTo, "description" => @description, "parentId" => @parentid})
       end
+    else
+      puts "Error: parentId does not exist for #{@dgroupname}"
     end
   end
-
-
+  puts
 end
 
 
@@ -92,7 +111,7 @@ def rpc(action, args={})
     url << "#{key}=#{value}&"
   end 
   url << "c=#{company}&u=#{username}&p=#{password}&"
-  #url << get_properties(@properties).to_s
+  url << get_properties(@properties).to_s
 
   uri = URI(URI.encode url)
   begin
@@ -109,6 +128,22 @@ def rpc(action, args={})
     puts e.message
   end
   return nil
+end
+
+def get_properties(properties)
+  propindex=""
+  if not @properties.nil?
+    props = @properties.split(":")
+    index = 0
+    props.each do |p|
+      eachProp = p.split("=")
+      key = eachProp[0]
+      value = eachProp[1]
+      propindex << "propName#{index}=#{key}&propValue#{index}=#{value}&"
+      index = index + 1
+    end
+    @propindex=propindex.chomp("&")
+  end
 end
 
 ###################################################################
