@@ -1,6 +1,6 @@
 # bulk_add_hosts.rb
 #
-# This is a ruby script to handle dynamic host group creation
+# This is a ruby script to handle the mass host imports
 #
 # Requires:
 # Ruby
@@ -10,14 +10,11 @@
 # open-url
 # net/http(s)
 # rbconfig
-# optparse
-# pp
-# date
 #
 # Authorized Sources:
 # LogicMonitor: https://github.com/logicmonitor
 #
-# Authors: Sam Dacanay, Ethan Culler-Mayeno, Perry Yang
+# Authors: Perry Yang, Ethan Culler
 #
 
 
@@ -31,31 +28,25 @@ require 'optparse'
 require 'pp'
 require 'date'
 
+
 def main
+  file  = @file
+  filecontent = File.open(file)
 
-  
-
-
-  string = rpc("getHostGroups")
-  hgs = JSON.parse(string)
-  my_arr = hgs['data']
-
-  id_arr = Array.new
+  groupname = "lmsupport-import-#{Time.now.strftime "%Y%m%d%H%M%S"}".chomp
+  rpc("addHostGroup", {"alertEnable" => false, "name" => groupname})
+ 
+  string = rpc("getHostGroups") #makes API call to grab host group
+  hostgroups= JSON.parse(string)
+  my_arr=hostgroups['data']
+  group_name_id_map = Hash.new
   my_arr.each do |value|
-    idval = value['id']
-    id_arr.push(idval)
+    group_name_id_map[value["fullPath"]] = value["id"]
   end
 
-  #puts id_arr
-
-  file = @file
-  #this part is actually awesome. CSV doesn't allow quoting that doesn't encapsulate an entire column/row thingy.
-  #in order to allow quoting in an appliesTo (which is pretty common), we make the quote_character of the csv object
-  #a character that doesn't appear in our csv (hopefully)
-  csv = CSV.open(file, quote_char: "\x00", :headers => true)
-
-  #csv = CSV.new(filecontent, {:headers => true})
-
+  lm_group_id = group_name_id_map[groupname]
+  csv = CSV.new(filecontent, {:headers => true})
+  
   csv.each do |row|
     #Skip row in loop if the line is commented out (A.K.A. starts with a '#' character)
     next if row[0].start_with?('#')
@@ -63,44 +54,36 @@ def main
     # validates presence of the hostname and collector id
     # next update: validate all rows before updating the account
     # give feedback on what lines/fields of the CSV will be problems
-    if row["dgroupname"].nil? or row["appliesTo"].nil?
+    if row["hostname"].nil? or row["collector_id"].nil?
       puts "Error: All hosts MUST have a valid hostname and collector ID"
       exit(1)
     end
-
-    #set instance variables to the value of the row
-    @dgroupname = row["dgroupname"]
-    @appliesTo = row["appliesTo"]
-    @parentid = row["parentid"]
-    @description = row["description"] 
-    @properties = row["properties"] 
-
-    puts
-    puts "Adding Dynamic Group #{@dgroupname} to LogicMonitor"
-    puts "RPC Response:"
-    puts
-
-    #parentId should default to one (root group) if nothing is passed in for that value
-    if @parentid.nil?
-      @parentid = 1
-    end
-
-    #check if parentId exists in current host groups or is root group
-    #this is to validate that an accurate parentId was passed into the csv
-    if id_arr.include?(@parentid.to_i) || @parentid == 1
-      #check if description is nil before adding
-      if @description.nil?
-        puts rpc("addHostGroup", {"alertEnable" => false, "dGroup" => true, "name" => @dgroupname, "appliesTo" => @appliesTo, "parentId" => @parentid})
-      else
-        puts rpc("addHostGroup", {"alertEnable" => false, "dGroup" => true, "name" => @dgroupname, "appliesTo" => @appliesTo, "description" => @description, "parentId" => @parentid})
-      end
+    @hostname = row["hostname"]
+    @collector_id = row["collector_id"]
+    @description = row["description"]
+    @properties = row["properties"]
+    # check for a display_name
+    if row["display_name"].nil?
+      @display_name = @hostname
     else
-      puts "Error: parentId does not exist for #{@dgroupname}"
+      @display_name = row["display_name"]
+    end
+    
+    # check for precense of a hostgroup and if there is, find the groupids 
+    group_list = build_group_list(row["group_list"], lm_group_id, group_name_id_map)
+    
+    # check if properties are nil
+
+    puts "Adding host #{@hostname} to LogicMonitor"
+    puts "RPC Response:"
+
+    if @description.nil?
+      puts rpc("addHost", {"hostName" =>@hostname, "displayedAs" =>@display_name, "agentId" => @collector_id, "hostGroupIds" => group_list.to_s})  
+    else
+      puts rpc("addHost", {"hostName" =>@hostname, "displayedAs" =>@display_name, "agentId" => @collector_id, "hostGroupIds" => group_list.to_s, "description" => @description})
     end
   end
-  puts
 end
-
 
 def rpc(action, args={})
   company = @company
@@ -130,6 +113,75 @@ def rpc(action, args={})
   return nil
 end
 
+def group_id_map(fullpath)
+  string = rpc("getHostGroups") #makes API call to grab host group
+  hostgroups= JSON.parse(string)
+  my_arr=hostgroups['data']
+
+  group_name_id_map = Hash.new
+  my_arr.each do |value|
+    group_name_id_map[value["fullPath"]] = value["id"]
+  end
+  return group_name_id_map[fullpath]
+end
+
+def build_group_list(fullpaths, import_group_id, map)
+  fullpathids = ""
+  if not fullpaths.nil?
+    path_array = fullpaths.split(":")
+    path_array.each do |path|
+      if map[path] #redundant check once dynamic group creation is added
+        fullpathids << map[path].to_s
+        fullpathids << ","
+      else
+        recursive_group_create(path,true)
+        fullpathids << group_id_map(path).to_s
+        fullpathids << ","
+      end
+    end
+  end
+  fullpathids << import_group_id.to_s
+  return fullpathids
+end
+
+def build_group_param_hash(fullpath, alertenable, parent_id)
+  path = fullpath.rpartition("/")
+  hash = {"name" => path[2]}
+  hash.store("parentId", parent_id)
+  hash.store("alertEnable", alertenable)
+  return hash
+end
+
+
+def recursive_group_create(fullpath, alertenable)
+  path = fullpath.rpartition("/")
+  parent_path = path[0]
+  puts("checking for parent: #{path[2]}")
+  parent_id = 1
+  if parent_path.nil? or parent_path.empty?
+    puts("highest level")
+  else
+    parent = get_group(parent_path)
+    if not parent.nil?
+      puts("parent group exists")
+      parent_id = parent["id"]
+    else
+      parent_ret = recursive_group_create(parent_path, true) #create parent group with basic information.
+      unless parent_ret.nil?
+        parent_id = parent_ret
+      end
+    end
+  end
+  hash = build_group_param_hash(fullpath, alertenable, parent_id)
+  resp_json = rpc("addHostGroup", hash)
+  resp = JSON.parse(resp_json)
+  if resp["data"].nil?
+    nil
+  else
+    resp["data"]["id"]
+  end
+end
+
 def get_properties(properties)
   propindex=""
   if not @properties.nil?
@@ -144,6 +196,22 @@ def get_properties(properties)
     end
     @propindex=propindex.chomp("&")
   end
+end
+
+def get_group(fullpath)
+  returnval = nil
+  group_list = JSON.parse(rpc("getHostGroups", {}))
+  if group_list["data"].nil?
+    puts("Unable to retrieve list of host groups from LogicMonitor Account")
+    p group_list
+  else
+    group_list["data"].each do |group|
+      if group["fullPath"].eql?(fullpath.sub(/^\//, ""))    #Check to see if group exists
+        returnval = group
+      end
+    end
+  end
+  returnval
 end
 
 ###################################################################
