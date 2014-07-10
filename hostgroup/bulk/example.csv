@@ -1,0 +1,3 @@
+groupname,appliesTo,grouppath,description,properties
+dynamogroup,system.displayname=="SamMacbook",/Mac/Test/Subtest/dgroup7,testgrouppath,
+staticogroup,,/Windows/Test/Subtest/staticogroup,teststaticgrouppathyolo
