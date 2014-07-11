@@ -77,28 +77,55 @@ def main
     puts "Adding host #{@hostname} to LogicMonitor"
     puts "RPC Response:"
 
-    if @description.nil?
-      puts rpc("addHost", {"hostName" =>@hostname, "displayedAs" =>@display_name, "agentId" => @collector_id, "hostGroupIds" => group_list.to_s})  
-    else
-      puts rpc("addHost", {"hostName" =>@hostname, "displayedAs" =>@display_name, "agentId" => @collector_id, "hostGroupIds" => group_list.to_s, "description" => @description})
-    end
+    host_args = {"hostName" =>@hostname, 
+                 "displayedAs" =>@display_name, 
+                 "agentId" => @collector_id, 
+                 "hostGroupIds" => group_list.to_s, 
+                 "description" => @description
+                }
+
+    host_args = host_args.merge(hash_to_lm(properties_to_hash(@properties)))
+
+    puts rpc("addHost", host_args)
+    
   end
 end
 
+#makes property hash based on property string (from csv)
+#csv property format: propname0=propvalue0:propname1=propvalue1:propname2=propvalue2
+def properties_to_hash(properties = '')
+  property_hash = {}
+  if not properties.nil?
+    props = properties.split(":")
+    index = 0
+    props.each do |p|
+      eachProp = p.split("=")
+      property_hash[eachProp[0]] = eachProp[1]
+      index = index + 1
+    end
+    return property_hash
+  end
+end
+
+#takes property hash (from format {"propname0" => "propvalue0", "propname1" => "propvalue1"} to
+# lm rpc api hash format {"propName0" => "nameOfProp", "propValue0" => "valueOfProp", "propName1"....}
+def hash_to_lm(property_hash)
+  lm_hash = {}
+  index = 0
+  hash = property_hash || {}
+  hash.each do |key, value|
+    lm_hash["propName#{index}"] = key
+    lm_hash["propValue#{index}"] = value
+    index = index + 1
+  end
+  return lm_hash
+end
+
+#performs LM RPC based on action and args
 def rpc(action, args={})
-  company = @company
-  username = @user
-  password = @password
-  url = "https://#{company}.logicmonitor.com/santaba/rpc/#{action}?"
-  args.each_pair do |key, value|
-    url << "#{key}=#{value}&"
-  end 
-  url << "c=#{company}&u=#{username}&p=#{password}&"
-  #the below line is deprecated and shouldn't be allowed to exist.
-  #url << get_properties(@properties).to_s
-
-
-  uri = URI(URI.encode url)
+  auth_hash = {"c" => @company, "u" => @user, "p" => @password}
+  uri = URI("https://#{@company}.logicmonitor.com/santaba/rpc/#{action}")
+  uri.query = URI.encode_www_form(args.merge(auth_hash))
   begin
     http = Net::HTTP.new(uri.host, 443)
     http.use_ssl = true
@@ -181,23 +208,6 @@ def recursive_group_create(fullpath, alertenable)
     nil
   else
     resp["data"]["id"]
-  end
-end
-
-#should be returning property string for url not setting instance variables
-def get_properties(properties)
-  propindex=""
-  if not @properties.nil?
-    props = @properties.split(":")
-    index = 0
-    props.each do |p|
-      eachProp = p.split("=")
-      key = eachProp[0]
-      value = eachProp[1]
-      propindex << "propName#{index}=#{key}&propValue#{index}=#{value}&"
-      index = index + 1
-    end
-    @propindex=propindex.chomp("&")
   end
 end
 

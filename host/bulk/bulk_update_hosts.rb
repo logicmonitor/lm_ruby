@@ -50,7 +50,6 @@ def main
   
   csv.each do |row|
     #Skip row in loop if the line is commented out (A.K.A. starts with a '#' character)
-    sleep(1.0/100.0)
     next if row[0].start_with?('#')
 
     # validates presence of the hostname and collector id
@@ -80,23 +79,58 @@ def main
         
 
  
-    puts "Updating host #{@hostname} to LogicMonitor"
+    puts "Updating host #{@hostname} in LogicMonitor Account"
     puts "RPC Response:"
-    puts rpc("updateHost", {"hostName" =>@hostname, "id" => @hostId, "displayedAs" =>@display_name, "agentId" => @collector_id, "hostGroupIds" => group_list.to_s, "description" => @description})
+
+    update_args = {"hostName" =>@hostname, 
+                   "id" => @hostId, 
+                   "displayedAs" =>@display_name, 
+                   "agentId" => @collector_id, 
+                   "hostGroupIds" => group_list.to_s, 
+                   "description" => @description
+                  }
+
+    update_args = update_args.merge(hash_to_lm(properties_to_hash(@properties)))
+
+    puts rpc("updateHost", update_args)
   end
 end
 
+#makes property hash based on property string (from csv)
+#csv property format: propname0=propvalue0:propname1=propvalue1:propname2=propvalue2
+def properties_to_hash(properties = '')
+  property_hash = {}
+  if not properties.nil?
+    props = properties.split(":")
+    index = 0
+    props.each do |p|
+      eachProp = p.split("=")
+      property_hash[eachProp[0]] = eachProp[1]
+      index = index + 1
+    end
+    return property_hash
+  end
+end
+
+#takes property hash (from format {"propname0" => "propvalue0", "propname1" => "propvalue1"} to
+# lm rpc api hash format {"propName0" => "nameOfProp", "propValue0" => "valueOfProp", "propName1"....}
+def hash_to_lm(property_hash)
+  lm_hash = {}
+  index = 0
+  hash = property_hash || {}
+  hash.each do |key, value|
+    lm_hash["propName#{index}"] = key
+    lm_hash["propValue#{index}"] = value
+    index = index + 1
+  end
+  return lm_hash
+end
+
+#performs LM RPC based on action and args
 def rpc(action, args={})
-  company = @company
-  username = @user
-  password = @password
-  url = "https://#{company}.logicmonitor.com/santaba/rpc/#{action}?"
-  args.each_pair do |key, value|
-    url << "#{key}=#{value}&"
-  end 
-  url << "c=#{company}&u=#{username}&p=#{password}&"
-  url << get_properties(@properties).to_s
-  uri = URI(URI.encode url)
+  auth_hash = {"c" => @company, "u" => @user, "p" => @password}
+  uri = URI("https://#{@company}.logicmonitor.com/santaba/rpc/#{action}")
+  uri.query = URI.encode_www_form(args.merge(auth_hash))
   begin
     http = Net::HTTP.new(uri.host, 443)
     http.use_ssl = true
@@ -146,6 +180,7 @@ def build_group_list(fullpaths, import_group_id, map)
   return fullpathids
 end
 
+#updates the group hash with name, parentId, and alertEnable
 def build_group_param_hash(fullpath, alertenable, parent_id)
   path = fullpath.rpartition("/")
   hash = {"name" => path[2]}
@@ -154,22 +189,39 @@ def build_group_param_hash(fullpath, alertenable, parent_id)
   return hash
 end
 
+#retrieves the group json object based on fullpath
+def get_group(fullpath)
+  returnval = nil
+  group_list = JSON.parse(rpc("getHostGroups", {}))
+  if group_list["data"].nil?
+    puts("Unable to retrieve list of host groups from LogicMonitor Account")
+  else
+    group_list["data"].each do |group|
+      if group["fullPath"].eql?(fullpath.sub(/^\//, ""))    #Check to see if group exists
+        returnval = group
+      end
+    end
+  end
+  return returnval
+end
 
 def recursive_group_create(fullpath, alertenable)
   path = fullpath.rpartition("/")
   parent_path = path[0]
-  puts("checking for parent: #{path[2]}")
+  puts("Checking to see if #{path[2]} exists...")
   parent_id = 1
   if parent_path.nil? or parent_path.empty?
-    puts("highest level")
+    puts("Parent Path is at highest level...")
   else
     parent = get_group(parent_path)
     if not parent.nil?
-      puts("parent group exists")
+      puts("Parent Group exists...")
       parent_id = parent["id"]
     else
+      puts("Creating Parent Group...")
       parent_ret = recursive_group_create(parent_path, true) #create parent group with basic information.
       unless parent_ret.nil?
+        puts("Parent Groups Created...")
         parent_id = parent_ret
       end
     end
@@ -182,38 +234,6 @@ def recursive_group_create(fullpath, alertenable)
   else
     resp["data"]["id"]
   end
-end
-
-def get_properties(properties)
-  propindex=""
-  if not @properties.nil?
-    props = @properties.split(":")
-    index = 0
-    props.each do |p|
-      eachProp = p.split("=")
-      key = eachProp[0]
-      value = eachProp[1]
-      propindex << "propName#{index}=#{key}&propValue#{index}=#{value}&"
-      index = index + 1
-    end
-    @propindex=propindex.chomp("&")
-  end
-end
-
-def get_group(fullpath)
-  returnval = nil
-  group_list = JSON.parse(rpc("getHostGroups", {}))
-  if group_list["data"].nil?
-    puts("Unable to retrieve list of host groups from LogicMonitor Account")
-    p group_list
-  else
-    group_list["data"].each do |group|
-      if group["fullPath"].eql?(fullpath.sub(/^\//, ""))    #Check to see if group exists
-        returnval = group
-      end
-    end
-  end
-  returnval
 end
 
 ###################################################################
