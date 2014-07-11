@@ -230,17 +230,9 @@ def get_group(fullpath)
 end
 
 def rpc(action, args={})
-  company = @company
-  username = @user
-  password = @password
-  url = "https://#{company}.logicmonitor.com/santaba/rpc/#{action}?"
-  first_arg = true
-  args.each_pair do |key, value|
-    url << "#{key}=#{value}&"
-  end
-  url << "c=#{company}&u=#{username}&p=#{password}"
-  #puts(url)
-  uri = URI(url)
+  auth_hash = {"c" => @company, "u" => @user, "p" => @password}
+  uri = URI("https://#{company}.logicmonitor.com/santaba/rpc/#{action}")
+  uri.query = URI.encode_www_form(args.merge(auth_hash))
   begin
     http = Net::HTTP.new(uri.host, 443)
     http.use_ssl = true
