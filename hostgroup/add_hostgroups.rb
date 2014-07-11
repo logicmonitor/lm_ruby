@@ -1,4 +1,4 @@
-# bulk_add_hostgroups.rb
+# bulk_add_hosts.rb
 #
 # This is a ruby script to handle dynamic host group creation
 #
@@ -67,12 +67,12 @@ def main
     @grouppath.slice!(0)
 
     #makes API call to grab existing host groups
-    group_name_id_map = {}
     string = rpc("getHostGroups") 
     hostgroups= JSON.parse(string)
     my_arr=hostgroups['data']
 
     #for each hostgroup, create a key/value pair that maps a fullpath to its id
+    group_name_id_map = Hash.new
     my_arr.each do |value|
       group_name_id_map[value["fullPath"]] = value["id"]
     end
@@ -83,28 +83,25 @@ def main
 
     #most important part -> validates grouppath (if parent groups don't exist, creates them)
     #and returns the parentid of the group we are creating once the grouppath is validated.
-    @parentid = get_parentid(@grouppath, group_name_id_map)
+    parentid = get_parentid(@grouppath, group_name_id_map)
+    puts "parentid = #{parentid}"
 
     #if appliesTo is not nil, assume group should be dynamic
-    if @appliesTo.nil?
-      static_args = {"alertEnable" => false, 
-                   "name" => @groupname, 
-                   "parentId" =>  @parentid, 
-                   "description" => @description
-                  }
-      static_args = static_args.merge(hash_to_lm(properties_to_hash(@properties)))
-      puts rpc("addHostGroup", static_args)
+    if not @appliesTo.nil?
+      #check if description is nil before adding
+      if @description.nil?
+        puts rpc("addHostGroup", {"alertEnable" => false, "dGroup" => true, "name" => @groupname, "appliesTo" => @appliesTo, "parentId" => parentid})
+      else
+        puts rpc("addHostGroup", {"alertEnable" => false, "dGroup" => true, "name" => @groupname, "appliesTo" => @appliesTo, "parentId" => parentid, "description" => @description})
+      end
     #if appliesTo is nil, assume group should be static
     else
-      dynamic_args = {"alertEnable" => false, 
-                    "dGroup" => true, 
-                    "name" => @groupname, 
-                    "appliesTo" => @appliesTo, 
-                    "parentId" => @parentid, 
-                    "description" => @description
-                   }
-      dynamic_args = dynamic_args.merge(hash_to_lm(properties_to_hash(@properties)))
-      puts rpc("addHostGroup", dynamic_args)
+      #check if description is nil before adding
+      if @description.nil?
+        puts rpc("addHostGroup", {"alertEnable" => false, "name" => @groupname, "parentId" => parentid})
+      else
+        puts rpc("addHostGroup", {"alertEnable" => false, "name" => @groupname, "parentId" =>  parentid, "description" => @description})
+      end
     end
 
   end
@@ -117,41 +114,36 @@ end
 #                                                                 #
 ###################################################################
 
-#makes property hash based on property string (from csv)
-#csv property format: propname0=propvalue0:propname1=propvalue1:propname2=propvalue2
-def properties_to_hash(properties = '')
-  property_hash = {}
-  if not properties.nil?
-    props = properties.split(":")
+#makes property string based on properties instance variable (from csv)
+def get_properties(properties)
+  propindex=""
+  if not @properties.nil?
+    props = @properties.split(":")
     index = 0
     props.each do |p|
       eachProp = p.split("=")
-      property_hash[eachProp[0]] = eachProp[1]
+      key = eachProp[0]
+      value = eachProp[1]
+      propindex << "propName#{index}=#{key}&propValue#{index}=#{value}&"
       index = index + 1
     end
-    return property_hash
+    @propindex=propindex.chomp("&")
   end
-end
-
-#takes property hash (from format {"propname0" => "propvalue0", "propname1" => "propvalue1"} to
-# lm rpc api hash format {"propName0" => "nameOfProp", "propValue0" => "valueOfProp", "propName1"....}
-def hash_to_lm(property_hash)
-  lm_hash = {}
-  index = 0
-  hash = property_hash || {}
-  hash.each do |key, value|
-    lm_hash["propName#{index}"] = key
-    lm_hash["propValue#{index}"] = value
-    index = index + 1
-  end
-  return lm_hash
 end
 
 #performs LM RPC based on action and args
 def rpc(action, args={})
-  auth_hash = {"c" => @company, "u" => @user, "p" => @password}
-  uri = URI("https://#{@company}.logicmonitor.com/santaba/rpc/#{action}")
-  uri.query = URI.encode_www_form(args.merge(auth_hash))
+  company = @company
+  username = @user
+  password = @password
+  url = "https://#{company}.logicmonitor.com/santaba/rpc/#{action}?"
+  args.each_pair do |key, value|
+    url << "#{key}=#{value}&"
+  end 
+  url << "c=#{company}&u=#{username}&p=#{password}&"
+  url << get_properties(@properties).to_s
+
+  uri = URI(URI.encode url)
   begin
     http = Net::HTTP.new(uri.host, 443)
     http.use_ssl = true
@@ -189,12 +181,15 @@ def get_parentid(fullpath, map)
     path = fullpath.rpartition("/")
     parent_path = path[0]
 
-    if map[parent_path] #redundant check once dynamic group creation is added
+    if map[parent_path]
        parentid = map[parent_path].to_s
     else
       recursive_group_create(parent_path,false)
       map = group_id_map_update(fullpath, map)
       parentid = map[parent_path].to_s
+      puts "in get_parentid, map = #{map}"
+      puts "in get_parentid, parent_path = #{parent_path}"
+      puts "in get_parentid, parentid = #{parentid}"
     end
 
   end
@@ -218,9 +213,11 @@ def get_group(fullpath)
   group_list = JSON.parse(rpc("getHostGroups", {}))
   if group_list["data"].nil?
     puts("Unable to retrieve list of host groups from LogicMonitor Account")
+    puts group_list
   else
     group_list["data"].each do |group|
-      if group["fullPath"].eql?(fullpath.sub(/^\//, ""))    #Check to see if group exists
+      #Check to see if group exists
+      if group["fullPath"].eql?(fullpath.sub(/^\//, ""))    
         returnval = group
       end
     end
@@ -242,7 +239,8 @@ def recursive_group_create(fullpath, alertenable)
       parent_id = parent["id"]
     else
       puts("Creating Parent Group...")
-      parent_ret = recursive_group_create(parent_path, true) #create parent group with basic information.
+      #create parent group with basic information.
+      parent_ret = recursive_group_create(parent_path, true) 
       unless parent_ret.nil?
         puts("Parent Groups Created...")
         parent_id = parent_ret

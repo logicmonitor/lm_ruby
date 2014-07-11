@@ -94,7 +94,9 @@ def rpc(action, args={})
     url << "#{key}=#{value}&"
   end 
   url << "c=#{company}&u=#{username}&p=#{password}&"
-  url << get_properties(@properties).to_s
+  #the below line is deprecated and shouldn't be allowed to exist.
+  #url << get_properties(@properties).to_s
+
 
   uri = URI(URI.encode url)
   begin
@@ -182,6 +184,7 @@ def recursive_group_create(fullpath, alertenable)
   end
 end
 
+#should be returning property string for url not setting instance variables
 def get_properties(properties)
   propindex=""
   if not @properties.nil?
