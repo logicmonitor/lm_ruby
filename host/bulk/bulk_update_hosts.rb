@@ -1,4 +1,4 @@
-# bulk_add_hosts.rb
+# bulk_update_hosts.rb
 #
 # This is a ruby script to handle the mass host imports
 #
@@ -98,18 +98,17 @@ end
 
 #makes property hash based on property string (from csv)
 #csv property format: propname0=propvalue0:propname1=propvalue1:propname2=propvalue2
-def properties_to_hash(properties = '')
+def properties_to_hash(properties)
   property_hash = {}
-  if not properties.nil?
-    props = properties.split(":")
-    index = 0
-    props.each do |p|
-      eachProp = p.split("=")
-      property_hash[eachProp[0]] = eachProp[1]
-      index = index + 1
-    end
-    return property_hash
+  index = 0
+  properties_valid = properties || ''
+  props = properties.split(":")
+  props.each do |p|
+    eachProp = p.split("=")
+    property_hash[eachProp[0]] = eachProp[1]
+    index = index + 1
   end
+  return property_hash
 end
 
 #takes property hash (from format {"propname0" => "propvalue0", "propname1" => "propvalue1"} to

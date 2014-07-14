@@ -67,12 +67,12 @@ def main
     @grouppath.slice!(0)
 
     #makes API call to grab existing host groups
-    group_name_id_map = {}
     string = rpc("getHostGroups") 
     hostgroups= JSON.parse(string)
     my_arr=hostgroups['data']
 
     #for each hostgroup, create a key/value pair that maps a fullpath to its id
+    group_name_id_map = {}
     my_arr.each do |value|
       group_name_id_map[value["fullPath"]] = value["id"]
     end
@@ -119,18 +119,17 @@ end
 
 #makes property hash based on property string (from csv)
 #csv property format: propname0=propvalue0:propname1=propvalue1:propname2=propvalue2
-def properties_to_hash(properties = '')
+def properties_to_hash(properties)
   property_hash = {}
-  if not properties.nil?
-    props = properties.split(":")
-    index = 0
-    props.each do |p|
-      eachProp = p.split("=")
-      property_hash[eachProp[0]] = eachProp[1]
-      index = index + 1
-    end
-    return property_hash
+  index = 0
+  properties_valid = properties || ''
+  props = properties.split(":")
+  props.each do |p|
+    eachProp = p.split("=")
+    property_hash[eachProp[0]] = eachProp[1]
+    index = index + 1
   end
+  return property_hash
 end
 
 #takes property hash (from format {"propname0" => "propvalue0", "propname1" => "propvalue1"} to
@@ -139,7 +138,7 @@ def hash_to_lm(property_hash)
   lm_hash = {}
   index = 0
   hash = property_hash || {}
-  hash.each do |key, value|
+  hash.each_pair do |key, value|
     lm_hash["propName#{index}"] = key
     lm_hash["propValue#{index}"] = value
     index = index + 1
