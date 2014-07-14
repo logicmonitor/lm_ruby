@@ -1,4 +1,4 @@
-# bulk_add_hostgroups.rb
+# add_hostgroup.rb
 #
 # This is a ruby script to handle dynamic host group creation
 #
@@ -72,7 +72,7 @@ def main
     my_arr=hostgroups['data']
 
     #for each hostgroup, create a key/value pair that maps a fullpath to its id
-    group_name_id_map = {}
+    group_name_id_map = Hash.new
     my_arr.each do |value|
       group_name_id_map[value["fullPath"]] = value["id"]
     end
@@ -83,28 +83,25 @@ def main
 
     #most important part -> validates grouppath (if parent groups don't exist, creates them)
     #and returns the parentid of the group we are creating once the grouppath is validated.
-    @parentid = get_parentid(@grouppath, group_name_id_map)
+    parentid = get_parentid(@grouppath, group_name_id_map)
+    puts "parentid = #{parentid}"
 
     #if appliesTo is not nil, assume group should be dynamic
-    if @appliesTo.nil?
-      static_args = {"alertEnable" => false, 
-                   "name" => @groupname, 
-                   "parentId" =>  @parentid, 
-                   "description" => @description
-                  }
-      static_args = static_args.merge(hash_to_lm(properties_to_hash(@properties)))
-      puts rpc("addHostGroup", static_args)
+    if not @appliesTo.nil?
+      #check if description is nil before adding
+      if @description.nil?
+        puts rpc("addHostGroup", {"alertEnable" => false, "dGroup" => true, "name" => @groupname, "appliesTo" => @appliesTo, "parentId" => parentid})
+      else
+        puts rpc("addHostGroup", {"alertEnable" => false, "dGroup" => true, "name" => @groupname, "appliesTo" => @appliesTo, "parentId" => parentid, "description" => @description})
+      end
     #if appliesTo is nil, assume group should be static
     else
-      dynamic_args = {"alertEnable" => false, 
-                    "dGroup" => true, 
-                    "name" => @groupname, 
-                    "appliesTo" => @appliesTo, 
-                    "parentId" => @parentid, 
-                    "description" => @description
-                   }
-      dynamic_args = dynamic_args.merge(hash_to_lm(properties_to_hash(@properties)))
-      puts rpc("addHostGroup", dynamic_args)
+      #check if description is nil before adding
+      if @description.nil?
+        puts rpc("addHostGroup", {"alertEnable" => false, "name" => @groupname, "parentId" => parentid})
+      else
+        puts rpc("addHostGroup", {"alertEnable" => false, "name" => @groupname, "parentId" =>  parentid, "description" => @description})
+      end
     end
 
   end
@@ -117,40 +114,36 @@ end
 #                                                                 #
 ###################################################################
 
-#makes property hash based on property string (from csv)
-#csv property format: propname0=propvalue0:propname1=propvalue1:propname2=propvalue2
-def properties_to_hash(properties)
-  property_hash = {}
-  index = 0
-  properties_valid = properties || ''
-  props = properties.split(":")
-  props.each do |p|
-    eachProp = p.split("=")
-    property_hash[eachProp[0]] = eachProp[1]
-    index = index + 1
+#makes property string based on properties instance variable (from csv)
+def get_properties(properties)
+  propindex=""
+  if not @properties.nil?
+    props = @properties.split(":")
+    index = 0
+    props.each do |p|
+      eachProp = p.split("=")
+      key = eachProp[0]
+      value = eachProp[1]
+      propindex << "propName#{index}=#{key}&propValue#{index}=#{value}&"
+      index = index + 1
+    end
+    @propindex=propindex.chomp("&")
   end
-  return property_hash
-end
-
-#takes property hash (from format {"propname0" => "propvalue0", "propname1" => "propvalue1"} to
-# lm rpc api hash format {"propName0" => "nameOfProp", "propValue0" => "valueOfProp", "propName1"....}
-def hash_to_lm(property_hash)
-  lm_hash = {}
-  index = 0
-  hash = property_hash || {}
-  hash.each_pair do |key, value|
-    lm_hash["propName#{index}"] = key
-    lm_hash["propValue#{index}"] = value
-    index = index + 1
-  end
-  return lm_hash
 end
 
 #performs LM RPC based on action and args
 def rpc(action, args={})
-  auth_hash = {"c" => @company, "u" => @user, "p" => @password}
-  uri = URI("https://#{@company}.logicmonitor.com/santaba/rpc/#{action}")
-  uri.query = URI.encode_www_form(args.merge(auth_hash))
+  company = @company
+  username = @user
+  password = @password
+  url = "https://#{company}.logicmonitor.com/santaba/rpc/#{action}?"
+  args.each_pair do |key, value|
+    url << "#{key}=#{value}&"
+  end 
+  url << "c=#{company}&u=#{username}&p=#{password}&"
+  url << get_properties(@properties).to_s
+
+  uri = URI(URI.encode url)
   begin
     http = Net::HTTP.new(uri.host, 443)
     http.use_ssl = true
@@ -194,6 +187,9 @@ def get_parentid(fullpath, map)
       recursive_group_create(parent_path,false)
       map = group_id_map_update(fullpath, map)
       parentid = map[parent_path].to_s
+      puts "in get_parentid, map = #{map}"
+      puts "in get_parentid, parent_path = #{parent_path}"
+      puts "in get_parentid, parentid = #{parentid}"
     end
 
   end
@@ -217,6 +213,7 @@ def get_group(fullpath)
   group_list = JSON.parse(rpc("getHostGroups", {}))
   if group_list["data"].nil?
     puts("Unable to retrieve list of host groups from LogicMonitor Account")
+    puts group_list
   else
     group_list["data"].each do |group|
       if group["fullPath"].eql?(fullpath.sub(/^\//, ""))    #Check to see if group exists
@@ -258,6 +255,10 @@ def recursive_group_create(fullpath, alertenable)
   end
 end
 
+def parse_properties(properties)
+  return JSON.parse(properties)
+end
+
 ###################################################################
 #                                                                 #
 #       Begin running part of the script                          #
@@ -286,9 +287,30 @@ begin
       @options[:password] = p
     end
 
-    opts.on("-f", "--file FILE", "A CSV file contaning the hosts to be added") do |f|
-      @options[:file] = f
+    opts.on("-g", "--groupname GROUPNAME", "How this hostgroup should appear in LogicMonitor Account.") do |g|
+      @options[:groupname] = g
     end
+
+    opts.on("-a", "--appliesto APPLIESTO", "If dynamic, the rule for adding hosts to this group. Don't forget to escape special characters") do |a|
+      @options[:appliesto] = a
+    end
+
+    opts.on("-F", "--fullpath \"/Grandparent/Parent/Group\"", "The full path of the location of the group, if null -> defaults to 1 (root group)") do |fpath|
+      @options[:fullpath] = fpath
+    end
+
+    opts.on "-D", "--description DESCRIPTION", "Long text host description") do |desc|
+      @options[:description] = desc
+    end
+
+    opts.on("-P", "--properties \{\"property1\":\"value1\",\"property2\":\"value2\",...\}", "JSON hash of host properties") do |props|
+      @options[:properties] = props
+    end
+
+    opts.on("-A", "--alertenable BOOLEAN", "Turn off alerting (defaults to on)") do |ae|
+      @options[:alertenable] = ae
+    end
+
     
   end.parse!
 rescue OptionParser::MissingArgument => ma
@@ -318,11 +340,19 @@ rescue  OptionParser::MissingArgument => ma
 end  
 
 begin
-  raise OptionParser::MissingArgument if @options[:file].nil?
+  raise OptionParser::MissingArgument if @options[:groupname].nil?
 rescue  OptionParser::MissingArgument => ma
-  puts "Missing option: -f <file>"
+  puts "Missing option: -g <groupname>"
   opt_error = true
-end  
+end
+
+begin
+  raise OptionParser::MissingArgument if @options[:fullpath].nil?
+rescue  OptionParser::MissingArgument => ma
+  puts "Missing option: -F <fullpath>"
+  opt_error = true
+end
+
 
 if opt_error
   exit 1
@@ -332,6 +362,16 @@ end
 @company = @options[:company]
 @user = @options[:user]
 @password = @options[:password]
-@file = @options[:file]
+@groupname = @options[:groupname]
+@appliesto = @options[:appliesto]
+@fullpath = @options[:fullpath]
+@description = @options[:description]
+@alertenable = @options[:alertenable]
+
+#inputs requiring parsing
+if @options[properties]
+  @properties = parse_properties(@options[:properties])
+else
+  @properties = false
 
 main()

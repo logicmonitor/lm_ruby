@@ -1,3 +1,3 @@
 groupname,appliesTo,grouppath,description,properties
-dynamogroup,system.displayname=="SamMacbook",/Mac/Test/Subtest/dgroup7,testgrouppath,
-staticogroup,,/Windows/Test/Subtest/staticogroup,teststaticgrouppathyolo
+dynamogroup,system.displayname=="SamMacbook",/Mac/Test/Subtest/dynamogroup,testgrouppath,sam.user=sam:sam.pass=dacanay
+staticogroup,,/Windows/Test/Subtest/staticogroup,teststaticgrouppathyolo,sam.user=sam:sam.pass=dacanay
