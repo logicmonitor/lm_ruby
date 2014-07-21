@@ -83,12 +83,10 @@ def main
                  "hostGroupIds" => group_list.to_s, 
                  "description" => @description
                 }
-    unless @properties.nil?            
-      host_args = host_args.merge(hash_to_lm(properties_to_hash(@properties)))
-    else
-      puts "Properties are nil..."
-    end
-    
+       
+    host_args = host_args.merge(hash_to_lm(properties_to_hash(@properties)))
+
+
     puts rpc("addHost", host_args)
     
   end
@@ -100,7 +98,7 @@ def properties_to_hash(properties)
   property_hash = {}
   index = 0
   properties_valid = properties || ''
-  props = properties.split(":")
+  props = properties_valid.split(":")
   props.each do |p|
     eachProp = p.split("=")
     property_hash[eachProp[0]] = eachProp[1]
