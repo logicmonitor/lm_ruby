@@ -27,25 +27,38 @@ require 'net/https'
 require 'optparse'
 require 'pp'
 require 'date'
+require 'logger'
 
 GLOBAL_GROUP_ID =1
 def main
+  @logger = Logger.new("bulk_update.log")
+  @logger.datetime_format = '%Y-%m-%d %H:%M:%S'
   file  = @file
-  filecontent = File.open(file)
+  begin
+    filecontent = File.open(file)
+  rescue Errno::ENOENT => e
+    puts "Invalid CSV entered. Please make sure path/filename are correct."
+    @logger.error "Invalid CSV entered. Please make sure path/filename are correct."
+    exit(1)
+  end
 
-  groupname = "lmsupport-import-#{Time.now.strftime "%Y%m%d%H%M%S"}".chomp
   string = rpc("getHostGroups") #makes API call to grab host group
   hostgroups= JSON.parse(string)
-  my_arr=hostgroups['data']
-  
-  group_name_id_map = Hash.new
-  my_arr.each do |value| 
-    if value["appliesTo"].eql?""
-      group_name_id_map[value["fullPath"]] = value["id"]
-    end
+  if hostgroups['status'] == 403
+    puts "Authentication failed. Check the url, username, and password."
+    @logger.error "Authentication failed. Check the url, username, and password."
+    exit(1)
+  else
+    groupname = "lmsupport-import-#{Time.now.strftime "%Y%m%d%H%M%S"}".chomp
+    my_arr=hostgroups['data']    
+    group_name_id_map = Hash.new
+    my_arr.each do |value| 
+      if value["appliesTo"].eql?""
+        group_name_id_map[value["fullPath"]] = value["id"]
+      end
+    end      
+    lm_group_id = group_name_id_map[groupname]
   end
-      
-  lm_group_id = group_name_id_map[groupname]
   csv = CSV.new(filecontent, {:headers => true})
   
   csv.each do |row|
@@ -57,6 +70,7 @@ def main
     # give feedback on what lines/fields of the CSV will be problems
     if row["hostname"].nil? or row["collector_id"].nil?
       puts "Error: All hosts MUST have a valid hostname and collector ID"
+      @logger.error "All hosts MUST have a valid hostname and collector ID. Check CSV for error."
       exit(1)
     end
     @hostname = row["hostname"]
@@ -71,14 +85,15 @@ def main
     host_list.each do |host|
       if (host["hostName"].eql?@hostname and host["agentId"].to_s.eql?@collector_id) or host["displayedAs"].eql?@display_name
         @hostId = host["id"]
+      else
+        puts "Can't find #{@hostname} to update. Each host must have referenced by the displayname or (hostname AND collector id)"
+        @logger.error "Can't find #{@hostname} to update. Each host must have referenced by the displayname or (hostname AND collector id)"
       end
     end   
  
     # check for precense of a hostgroup and if there is, find the groupids 
     group_list = build_group_list(row["group_list"], "", group_name_id_map)
-        
 
- 
     puts "Updating host #{@hostname} in LogicMonitor Account"
     puts "RPC Response:"
 
@@ -92,7 +107,14 @@ def main
 
     update_args = update_args.merge(hash_to_lm(properties_to_hash(@properties)))
 
-    puts rpc("updateHost", update_args)
+    response = rpc("updateHost", update_args)
+    response_json = JSON.parse(response)
+    if response_json["status"] == 200
+      puts response
+    else
+      puts "Error: #{response}"
+      logger.error "Error updating host #{@hostname}: #{response}"
+    end
   end
 end
 
@@ -139,8 +161,10 @@ def rpc(action, args={})
     return response.body
   rescue SocketError => se
     puts "There was an issue communicating with #{url}. Please make sure everything is correct and try again."
+    @logger.error "SocketError: There was an issue communicating with #{url}. Please make sure everything is correct and try again."
   rescue Exception => e
     puts "There was an issue."
+    @logger.error "Error: #{e.message}"
     puts e.message
   end
   return nil
@@ -188,12 +212,12 @@ def build_group_param_hash(fullpath, alertenable, parent_id)
   return hash
 end
 
-#retrieves the group json object based on fullpath
 def get_group(fullpath)
   returnval = nil
   group_list = JSON.parse(rpc("getHostGroups", {}))
   if group_list["data"].nil?
     puts("Unable to retrieve list of host groups from LogicMonitor Account")
+    @logger.error "Unable to retrieve list of host groups from LogicMonitor Account"
   else
     group_list["data"].each do |group|
       if group["fullPath"].eql?(fullpath.sub(/^\//, ""))    #Check to see if group exists
@@ -201,26 +225,24 @@ def get_group(fullpath)
       end
     end
   end
-  return returnval
+  returnval
 end
 
 def recursive_group_create(fullpath, alertenable)
   path = fullpath.rpartition("/")
   parent_path = path[0]
-  puts("Checking to see if #{path[2]} exists...")
+  puts("checking for parent: #{path[2]}")
   parent_id = 1
   if parent_path.nil? or parent_path.empty?
-    puts("Parent Path is at highest level...")
+    puts("highest level")
   else
     parent = get_group(parent_path)
     if not parent.nil?
-      puts("Parent Group exists...")
+      puts("parent group exists")
       parent_id = parent["id"]
     else
-      puts("Creating Parent Group...")
       parent_ret = recursive_group_create(parent_path, true) #create parent group with basic information.
       unless parent_ret.nil?
-        puts("Parent Groups Created...")
         parent_id = parent_ret
       end
     end
