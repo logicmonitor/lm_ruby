@@ -59,8 +59,10 @@ def main
     end      
     lm_group_id = group_name_id_map[groupname]
   end
+  @total_updates = 0
+  @successful_updates = []
+  @failed_updates = []
   csv = CSV.new(filecontent, {:headers => true})
-  
   csv.each do |row|
     #Skip row in loop if the line is commented out (A.K.A. starts with a '#' character)
     next if row[0].start_with?('#')
@@ -108,14 +110,24 @@ def main
     update_args = update_args.merge(hash_to_lm(properties_to_hash(@properties)))
 
     response = rpc("updateHost", update_args)
+    
     response_json = JSON.parse(response)
     if response_json["status"] == 200
       puts response
+      @successful_updates << @hostname
     else
       puts "Error: #{response}"
-      logger.error "Error updating host #{@hostname}: #{response}"
+      @logger.error "Error updating host #{@hostname}: #{response}"
+      @failed_updates << @hostname
     end
+    @total_updates = @total_updates + 1
   end
+  puts "------------------Bulk Update Summary------------------"
+  puts "Number of Updates Attempted: #{@total_updates}"
+  puts "Number of Devices Successfully Updated: #{@successful_updates.size}"
+  puts "Devices Successfully Updated: #{@successful_updates}"
+  puts "Number of Devices Unsucessfully Updated: #{@failed_updates.size}"
+  puts "Devices Unsuccessfully Updated: #{@failed_updates}"
 end
 
 #makes property hash based on property string (from csv)

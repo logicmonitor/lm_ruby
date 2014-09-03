@@ -59,9 +59,11 @@ def main
     lm_group_id = group_name_id_map[groupname]
   end
 
-  
+  @successful_uploads = []
+  @failed_uploads = []
+  @duplicate_uploads = []
+  @total_uploads = 0
   csv = CSV.new(filecontent, {:headers => true})
-  
   csv.each do |row|
     #Skip row in loop if the line is commented out (A.K.A. starts with a '#' character)
     next if row[0].start_with?('#')
@@ -108,11 +110,26 @@ def main
     response_json = JSON.parse(response)
     if response_json["status"] == 200
       puts response
+      @successful_uploads << @hostname
+    elsif response_json["status"] == 600
+      puts "Error: #{response}"
+      @logger.error "Error adding host #{@hostname}: #{response}"
+      @duplicate_uploads << @hostname
     else
       puts "Error: #{response}"
       @logger.error "Error adding host #{@hostname}: #{response}"
+      @failed_uploads << @hostname
     end
+    @total_uploads = @total_uploads + 1
   end
+  puts "------------------Bulk Add Summary------------------"
+  puts "Number of Uploads Attempted: #{@total_uploads}"
+  puts "Number of Devices Successfully Uploaded: #{@successful_uploads.size}"
+  puts "Devices Successfully Uploaded: #{@successful_uploads}"
+  puts "Number of Devices that already existed in Logicmonitor Account: #{@duplicate_uploads.size}"
+  puts "Devices that already existed in Logicmonitor Account: #{@duplicate_uploads}"
+  puts "Number of Devices Unsucessfully Uploaded: #{@failed_uploads.size}"
+  puts "Devices Unsuccessfully Uploaded: #{@failed_uploads}"
 end
 
 #makes property hash based on property string (from csv)

@@ -48,6 +48,9 @@ def main
     exit(1)
   end
 
+  @successful_uploads = []
+  @failed_uploads = []
+  @total_uploads = 0
   csv.each do |row|
     #Skip row in loop if the line is commented out (A.K.A. starts with a '#' character)
     next if row[0].start_with?('#')
@@ -68,10 +71,10 @@ def main
     @properties = row["properties"] 
 
     #make sure that the group path entered follows Linux directory structure (for consistency and user ease-of-use)
-    if not @grouppath.start_with?("/")
+    unless @grouppath.start_with?("/")
         puts "Error: Invalid group path entered, must begin with '/'"
         @logger.error "Invalid group path entered for #{@groupname}, must begin with '/'"
-        exit(1)
+        @grouppath.insert(0, '/')
     end
     @grouppath.slice!(0)
 
@@ -106,9 +109,11 @@ def main
       response_json = JSON.parse(response)
       if response_json["status"] == 200
         puts response
+        @successful_uploads << @groupname
       else
         puts "Error: #{response}"
         @logger.error "Error adding hostgroup #{@groupname}: #{response}"
+        @failed_uploads << @groupname
       end
     #if appliesTo is nil, assume group should be static
     else
@@ -124,15 +129,23 @@ def main
       response_json = JSON.parse(response)
       if response_json["status"] == 200
         puts response
+        @successful_uploads << @groupname
       else
         puts "Error: #{response}"
         @logger.error "Error adding hostgroup #{@groupname}: #{response}"
+        @failed_uploads << @groupname
       end
     end
-
+    @total_uploads = @total_uploads + 1
   end
-  puts
+  puts "------------------Bulk Add Hostgroup Summary------------------"
+  puts "Number of Uploads Attempted: #{@total_uploads}"
+  puts "Number of Groups Successfully Uploaded: #{@successful_uploads.size}"
+  puts "Groups Successfully Uploaded: #{@successful_uploads}"
+  puts "Number of Groups Unsucessfully Uploaded: #{@failed_uploads.size}"
+  puts "Groups Unsuccessfully Uploaded: #{@failed_uploads}"
 end
+
 
 ###################################################################
 #                                                                 #
