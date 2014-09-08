@@ -64,9 +64,17 @@ def main
   @duplicate_uploads = []
   @total_uploads = 0
   csv = CSV.new(filecontent, {:headers => true})
+  if csv.readlines.size > 500
+    puts "Error: CSV Too Large. Maximum Upload load is 100 Devices at a time."
+    @logger.error "CSV Too Large. Maximum Upload load is 100 Devices at a time."
+    exit(1)
+  end
   csv.each do |row|
     #Skip row in loop if the line is commented out (A.K.A. starts with a '#' character)
     next if row[0].start_with?('#')
+
+    #only one request to API per second
+    sleep(1)
 
     # validates presence of the hostname and collector id
     # next update: validate all rows before updating the account

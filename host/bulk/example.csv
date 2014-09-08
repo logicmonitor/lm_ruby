@@ -1,4 +1,0 @@
-collector_id,hostname,display_name,group_list,description,properties
-10,foreignhost,host1,Netapp,desc1,x.user=sam:x.pass=sam
-10,10.0.1.12,host2,Vcenter/ESX Hosts,desc2,y.user=sam:y.pass=sam
-10,10.1.0.12,host3,Networking/Routers,desc3,z.user=sam:z.pass=sam

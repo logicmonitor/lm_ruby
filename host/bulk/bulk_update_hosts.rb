@@ -63,10 +63,18 @@ def main
   @successful_updates = []
   @failed_updates = []
   csv = CSV.new(filecontent, {:headers => true})
+  if csv.readlines.size > 500
+    puts "Error: CSV Too Large. Maximum Update load is 500 Devices at a time."
+    @logger.error "CSV Too Large. Maximum Update load is 500 Devices at a time."
+    exit(1)
+  end
   csv.each do |row|
     #Skip row in loop if the line is commented out (A.K.A. starts with a '#' character)
     next if row[0].start_with?('#')
 
+    #only one request to API per second
+    sleep(1)
+    
     # validates presence of the hostname and collector id
     # next update: validate all rows before updating the account
     # give feedback on what lines/fields of the CSV will be problems
@@ -84,13 +92,10 @@ def main
     hosts_response = rpc("getHosts",{"hostGroupId"=>GLOBAL_GROUP_ID})
     hosts_json = JSON.parse(hosts_response)
     host_list = hosts_json["data"]["hosts"]
+
     host_list.each do |host|
-      if (host["hostName"].eql?@hostname and host["agentId"].to_s.eql?@collector_id) or host["displayedAs"].eql?@display_name
-        @hostId = host["id"]
-      else
-        puts "Can't find #{@hostname} to update. Each host must have referenced by the displayname or (hostname AND collector id)"
-        @logger.error "Can't find #{@hostname} to update. Each host must have referenced by the displayname or (hostname AND collector id)"
-      end
+      next if (host["hostName"] != @hostname && host["agentId"].to_s != @collector_id) || host["displayedAs"] != @display_name
+      @hostId = host["id"]  
     end   
  
     # check for precense of a hostgroup and if there is, find the groupids 
@@ -114,6 +119,7 @@ def main
     response_json = JSON.parse(response)
     if response_json["status"] == 200
       puts response
+      @logger.info "Successfully Updated host #{@hostname}"
       @successful_updates << @hostname
     else
       puts "Error: #{response}"
@@ -123,11 +129,17 @@ def main
     @total_updates = @total_updates + 1
   end
   puts "------------------Bulk Update Summary------------------"
+  @logger.info "------------------Bulk Update Summary------------------"
   puts "Number of Updates Attempted: #{@total_updates}"
+  @logger.info "Number of Updates Attempted: #{@total_updates}"
   puts "Number of Devices Successfully Updated: #{@successful_updates.size}"
+  @logger.info "Number of Devices Successfully Updated: #{@successful_updates.size}"
   puts "Devices Successfully Updated: #{@successful_updates}"
+  @logger.info "Devices Successfully Updated: #{@successful_updates}"
   puts "Number of Devices Unsucessfully Updated: #{@failed_updates.size}"
+  @logger.info "Number of Devices Unsucessfully Updated: #{@failed_updates.size}"
   puts "Devices Unsuccessfully Updated: #{@failed_updates}"
+  @logger.info "Devices Unsuccessfully Updated: #{@failed_updates}"
 end
 
 #makes property hash based on property string (from csv)
@@ -136,7 +148,7 @@ def properties_to_hash(properties)
   property_hash = {}
   index = 0
   properties_valid = properties || ''
-  props = properties.split(":")
+  props = properties_valid.split(":")
   props.each do |p|
     eachProp = p.split("=")
     property_hash[eachProp[0]] = eachProp[1]
