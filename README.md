@@ -1,32 +1,34 @@
 # lm_ruby
-LogicMonitor is a cloud-based, full stack, IT infrastructure monitoring solution that allows you to manage your infrastructure from the cloud. *Lm_ruby* contains a set of stand-alone scripts which can be used to manage your LogicMonitor account programmatically. These scripts are intended to be functional examples of interaction with the LogicMonitor API in ruby.
+LogicMonitor is a cloud-based, full stack, IT infrastructure monitoring solution that allows you to manage your infrastructure from the cloud. *lm_ruby* contains a set of stand-alone scripts which can be used to manage your LogicMonitor account programmatically. These scripts are intended to be functional examples of interaction with the LogicMonitor API in ruby.
 
 ##Prerequisites
 In order to use these scripts there are a few things you will need.
 - Access to a LogicMonitor account
 - Sufficient permissions to perform the desired action
 - A ruby run time environment (Ruby version 1.9.3 or later)
+    - ruby can be installed from [here](https://www.ruby-lang.org/en/installation/)
 
 ##Overview
-This repository is not a complete set of scripts required to fully manage your LogicMonitor account, nor does it cover the full extend of the LogicMonitor API. Here's what we have so far.
+This repository is not a complete set of scripts required to fully manage your LogicMonitor account, nor does it cover the full extent of the LogicMonitor API. Here's what we have so far.
 
-####Upcoming features
-- For bulk addition of hosts, the ability to create host groups to an arbitrary depth as part of the addition.
-- 
-
-####Platform specific tools
+####Platform Specific Tools
 The following scripts are for managing specific types of devices.
 
 **Linux collector management:**
 - add_collector
 - remove_collector
 
-####Platform agnostic tools
-**Host management:**
+####Platform Independent Tools
+**Host Management:**
 - add_host
 - remove_host
 - sdt_host
-- mass_upload_hosts
+- bulk_add_hosts
+- bulk_update_hosts
+- bulk_export_hosts
+
+**Host Group Management:**
+- bulk_add_hostgroups
 
 **Alert management:**
 - get_count_alerts
@@ -126,7 +128,7 @@ Usage: sdt_host.rb -c <company> -u <user> -p <password> -H <hostname> [-C <colle
 ```
 
  
-###mass-upload/bulk_add_hosts.rb 
+###host/bulk/bulk_add_hosts.rb 
 This script parses a CSV formated list of hosts and adds them to monitoring.
 
 ```
@@ -139,10 +141,10 @@ Usage: ruby bulk_add_hosts.rb -c <company> -u <user> -p <password> -f <file>
     -f, --file FILE                  A CSV file contaning the hosts to be added. 
 ```
 
-We have provided a sample CSV file [example.csv](/mass-upload/example.csv) to show the required set and order of the columns. This script currently requires any host groups specified in the script to already exist in the account.
+We have provided a sample CSV file [example.csv](/host/bulk/example.csv) to show the required set and order of the columns. This script currently requires any host groups specified in the script to already exist in the account.
 To make sure that bulk_add_hosts can read the CSV file, you need to specify either the full path to the CSV file OR the relative path from the current working directory.
 
-###mass-export/bulk_export_hosts.rb
+###host/bulk/bulk_export_hosts.rb
 This scipt exports all of your hosts into a CSV file 
 
 ```
@@ -157,8 +159,8 @@ Usage: ruby bulk_add_hosts.rb -c <company> -u <user> -p <password> -f <file>
 
 Best practice would be to run the host export script if you were to do a bulk update on multiple hosts. This ensures that you have the properly formatted CSV file and will make the multi-host update much quicker and easier.
 
-###mass-update/bulk_update_hosts.rb
-This script parses a CSV formated list of hosts updates the exists host according to the information provided in the CSV.
+###host/bulk/bulk_update_hosts.rb
+This script parses a CSV formatted list of hosts updates the exists host according to the information provided in the CSV.
 
 ```
 $> ruby bulk_update_hosts.rb -h
@@ -171,3 +173,20 @@ Usage: ruby bulk_add_hosts.rb -c <company> -u <user> -p <password> -f <file>
 ```
 
 This will not work with hosts that do not already exist. A working update will probably be to add the host if they could not find this host and apply the settings. However, if the script fails out, the first step would be check if all the hosts in the CSV all exist
+
+###hostgroup/bulk/bulk_add_hostgroups.rb
+This script parses a CSV formatted list of hostgroups and adds them to a Logicmonitor Account
+
+```
+$> ruby bulk_add_hostgroups.rb -h
+Usage: ruby bulk_add_hosts.rb -c <company> -u <user> -p <password> -f <file>
+    -d, --debug                      Turn on debug print statements
+    -c, --company COMPANY            LogicMonitor Account
+    -u, --user USERNAME              LogicMonitor user name
+    -p, --password PASSWORD          LogicMonitor password
+    -f, --file FILE                  A CSV file contaning the hostgroups to be added
+```
+
+This will check each hostgroup row in the CSV and add Host Groups. Dynamic Host Groups can be distinguished from static via the appliesTo column. An empty appliesTo section denotes a static Host Group.
+
+We have provided a sample CSV file [example.csv](/hostgroup/bulk/example.csv) to show the required set and order of the columns. To make sure that bulk_add_hostgroups can read the CSV file, you need to specify either the full path to the CSV file OR the relative path from the current working directory.
