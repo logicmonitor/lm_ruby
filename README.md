@@ -139,7 +139,7 @@ Usage: ruby bulk_add_hosts.rb -c <company> -u <user> -p <password> -f <file>
     -f, --file FILE                  A CSV file contaning the hosts to be added. 
 ```
 
-We have provided a sample CSV file [example.csv](/mass-upload/example.csv) to show the required set and order of the columns. This script currently requires any host groups specified in the script to already exist in the account.
+We have provided a sample CSV file [example.csv](./host/bulk/example.csv) to show the required set and order of the columns. This script currently requires any host groups specified in the script to already exist in the account.
 To make sure that bulk_add_hosts can read the CSV file, you need to specify either the full path to the CSV file OR the relative path from the current working directory.
 
 ###mass-export/bulk_export_hosts.rb
