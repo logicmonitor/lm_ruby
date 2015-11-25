@@ -21,6 +21,7 @@ require 'open-uri'
 require 'net/http'
 require 'net/https'
 require 'optparse'
+require 'yaml'
 
 def run(hostname, displayname, collector, description, groups, properties, alertenable)
   host_exist = get_host_by_displayname(displayname) || get_host_by_hostname(hostname, collector)
@@ -249,6 +250,16 @@ def rpc(action, args={})
   return nil
 end
 
+# Load credentials from a yaml file
+def load_credentials_from_file(filepath)
+  raise ArgumentError, "#{filepath} does not exist." unless File.exist?(filepath)
+  creds = YAML.load_file(filepath)
+  creds.keys.each do |key|
+    creds[(key.to_sym rescue key) || key] = creds.delete(key)
+  end
+  creds
+end
+
 ###################################################################
 #                                                                 #
 #       Begin running part of the script                          #
@@ -259,7 +270,13 @@ opt_error = false
 begin
   @options = {}
   OptionParser.new do |opts|
-    opts.banner = "Usage: add_host.rb -c <company> -u <user> -p <password> -C <collectorName> -H <hostname> [-n <displayname> -D <description> -g <grouplist> -P <properties> -a <alertenable> -d]"
+    opts.banner = "usage:
+      add_host.rb -f path/to/credentials.yml -C <collectorName> -H <hostname> [-n <displayname> -D <description> -g <grouplist> -P <properties> -a <alertenable> -d]
+      
+      -or-
+
+      add_host.rb -c <company> -u <user> -p <password> -C <collectorName> -H <hostname> [-n <displayname> -D <description> -g <grouplist> -P <properties> -a <alertenable> -d]
+      "
 
     opts.on("-d", "--debug", "Turn on debug print statements") do |v|
       @options[:debug] = v
@@ -275,6 +292,10 @@ begin
 
     opts.on("-p", "--password PASSWORD", "LogicMonitor password") do |p|
       @options[:password] = p
+    end
+
+    opts.on("-f", "--creds FILE", "LogicMonitor credentials") do |f|
+      @options[:credentials] = File.expand_path(f)
     end
 
     opts.on("-C", "--collector COLLECTOR", "Collector to monitor this host") do |collector|
@@ -310,6 +331,11 @@ rescue OptionParser::MissingArgument => ma
    puts ma.inspect
    opt_error = true
 end  
+
+if @options[:credentials]
+  creds = load_credentials_from_file(@options[:credentials])
+  @options.merge!(creds)
+end
 
 begin
   raise OptionParser::MissingArgument if @options[:company].nil?

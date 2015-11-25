@@ -75,12 +75,19 @@ warn = 0
 This idempotent script adds a new device to monitoring in your LogicMonitor account. This addition includes setting host properties and group membership. If the groups required for the addition of this host do not exist, they will be created. For more information on managing hosts [click here](http://help.logicmonitor.com/using/managing-hosts/).
 
 ```
-$> ruby add_host.rb -h
-Usage: add_host.rb -c <company> -u <user> -p <password> -C <collectorName> -H <hostname> [-n <displayname> -D <description> -g <grouplist> -P <properties> -a <alertenable> -d]
+$> ruby ./add_host.rb -h
+usage:
+      add_host.rb -f path/to/credentials.yml -C <collectorName> -H <hostname> [-n <displayname> -D <description> -g <grouplist> -P <properties> -a <alertenable> -d]
+
+      -or-
+
+      add_host.rb -c <company> -u <user> -p <password> -C <collectorName> -H <hostname> [-n <displayname> -D <description> -g <grouplist> -P <properties> -a <alertenable> -d]
+
     -d, --debug                      Turn on debug print statements
     -c, --company COMPANY            LogicMonitor Account
     -u, --user USERNAME              LogicMonitor user name
     -p, --password PASSWORD          LogicMonitor password
+    -f, --creds FILE                 LogicMonitor credentials
     -C, --collector COLLECTOR        Collector to monitor this host
     -H, --name HOSTNAME              Hostname of this device
     -n, --displayname DISPLAYNAME    How this host should appear in LogicMonitor account
@@ -91,7 +98,6 @@ Usage: add_host.rb -c <company> -u <user> -p <password> -C <collectorName> -H <h
         --properties                 JSON hash of host properties
     -a, --alertenable                Turn on alerting for the host
 ```
-
 
 ###host/remove_host.rb
 This idempotent script removes a device from monitoring in your LogicMonitor account. Note: this does not remove host groups that contain this host even if they were created by adding this host.
