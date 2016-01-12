@@ -8,7 +8,7 @@ In order to use these scripts there are a few things you will need.
 - A ruby run time environment (Ruby version 1.9.3 or later)
 
 ##Overview
-This repository is not a complete set of scripts required to fully manage your LogicMonitor account, nor does it cover the full extend of the LogicMonitor API. Here's what we have so far.
+This repository is not a complete set of scripts required to fully manage your LogicMonitor account, nor does it cover the full extent of the LogicMonitor API. Here's what we have so far.
 
 ####Upcoming features
 - For bulk addition of hosts, the ability to create host groups to an arbitrary depth as part of the addition.
