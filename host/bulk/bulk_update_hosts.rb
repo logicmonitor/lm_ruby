@@ -102,11 +102,14 @@ def properties_to_hash(properties)
   property_hash = {}
   index = 0
   properties_valid = properties || ''
-  props = properties.split(":")
-  props.each do |p|
-    eachProp = p.split("=")
-    property_hash[eachProp[0]] = eachProp[1]
-    index = index + 1
+  
+  if not properties.nil?
+    props = properties.split(":")
+    props.each do |p|
+      eachProp = p.split("=")
+      property_hash[eachProp[0]] = eachProp[1]
+      index = index + 1
+    end
   end
   return property_hash
 end
