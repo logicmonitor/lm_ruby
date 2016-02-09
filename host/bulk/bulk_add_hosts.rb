@@ -62,6 +62,7 @@ def main
     @collector_id = row["collector_id"]
     @description = row["description"]
     @properties = row["properties"]
+    @link = row["link"]
     # check for a display_name
     if row["display_name"].nil?
       @display_name = @hostname
@@ -81,7 +82,8 @@ def main
                  "displayedAs" =>@display_name, 
                  "agentId" => @collector_id, 
                  "hostGroupIds" => group_list.to_s, 
-                 "description" => @description
+                 "description" => @description,
+                 "link" => @link
                 }
        
     host_args = host_args.merge(hash_to_lm(properties_to_hash(@properties)))
