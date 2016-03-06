@@ -27,26 +27,43 @@ require 'net/https'
 require 'optparse'
 require 'pp'
 require 'date'
-
+require 'logger'
 
 def main
+  @logger = Logger.new("bulk_add.log")
+  @logger.datetime_format = '%Y-%m-%d %H:%M:%S'
   file  = @file
-  filecontent = File.open(file)
-
-  groupname = "lmsupport-import-#{Time.now.strftime "%Y%m%d%H%M%S"}".chomp
-  rpc("addHostGroup", {"alertEnable" => false, "name" => groupname})
+  begin
+    filecontent = File.open(file)
+  rescue Errno::ENOENT => e
+    puts "Invalid CSV entered. Please make sure path/filename are correct."
+    @logger.error "Invalid CSV entered. Please make sure path/filename are correct."
+    exit(1)
+  end
  
   string = rpc("getHostGroups") #makes API call to grab host group
   hostgroups= JSON.parse(string)
-  my_arr=hostgroups['data']
-  group_name_id_map = Hash.new
-  my_arr.each do |value|
-    group_name_id_map[value["fullPath"]] = value["id"]
+  if hostgroups['status'] == 403
+    puts "Authentication failed. Check the url, username, and password."
+    @logger.error "Authentication failed. Check the url, username, and password."
+    exit(1)
+  else
+    groupname = "lmsupport-import-#{Time.now.strftime "%Y%m%d%H%M%S"}".chomp
+    rpc("addHostGroup", {"alertEnable" => false, "name" => groupname})
+
+    my_arr=hostgroups['data']
+    group_name_id_map = Hash.new
+    my_arr.each do |value|
+      group_name_id_map[value["fullPath"]] = value["id"]
+    end
+    lm_group_id = group_name_id_map[groupname]
   end
 
-  lm_group_id = group_name_id_map[groupname]
+  @successful_uploads = []
+  @failed_uploads = []
+  @duplicate_uploads = []
+  @total_uploads = 0
   csv = CSV.new(filecontent, {:headers => true})
-  
   csv.each do |row|
     #Skip row in loop if the line is commented out (A.K.A. starts with a '#' character)
     next if row[0].start_with?('#')
@@ -56,6 +73,7 @@ def main
     # give feedback on what lines/fields of the CSV will be problems
     if row["hostname"].nil? or row["collector_id"].nil?
       puts "Error: All hosts MUST have a valid hostname and collector ID"
+      @logger.error "All hosts MUST have a valid hostname and collector ID. Check CSV for error."
       exit(1)
     end
     @hostname = row["hostname"]
@@ -72,6 +90,7 @@ def main
     
     # check for precense of a hostgroup and if there is, find the groupids 
     group_list = build_group_list(row["group_list"], lm_group_id, group_name_id_map)
+
     
     # check if properties are nil
 
@@ -86,12 +105,33 @@ def main
                  "link" => @link
                 }
        
+    
     host_args = host_args.merge(hash_to_lm(properties_to_hash(@properties)))
 
-
-    puts rpc("addHost", host_args)
-    
+    response = rpc("addHost", host_args)
+    response_json = JSON.parse(response)
+    if response_json["status"] == 200
+      puts response
+      @successful_uploads << @hostname
+    elsif response_json["status"] == 600
+      puts "Error: #{response}"
+      @logger.error "Error adding host #{@hostname}: #{response}"
+      @duplicate_uploads << @hostname
+    else
+      puts "Error: #{response}"
+      @logger.error "Error adding host #{@hostname}: #{response}"
+      @failed_uploads << @hostname
+    end
+    @total_uploads = @total_uploads + 1
   end
+  puts "------------------Bulk Add Summary------------------"
+  puts "Number of Uploads Attempted: #{@total_uploads}"
+  puts "Number of Devices Successfully Uploaded: #{@successful_uploads.size}"
+  puts "Devices Successfully Uploaded: #{@successful_uploads}"
+  puts "Number of Devices that already existed in Logicmonitor Account: #{@duplicate_uploads.size}"
+  puts "Devices that already existed in Logicmonitor Account: #{@duplicate_uploads}"
+  puts "Number of Devices Unsucessfully Uploaded: #{@failed_uploads.size}"
+  puts "Devices Unsuccessfully Uploaded: #{@failed_uploads}"
 end
 
 #makes property hash based on property string (from csv)
@@ -137,8 +177,10 @@ def rpc(action, args={})
     return response.body
   rescue SocketError => se
     puts "There was an issue communicating with #{url}. Please make sure everything is correct and try again."
+    @logger.error "SocketError: There was an issue communicating with #{url}. Please make sure everything is correct and try again."
   rescue Exception => e
     puts "There was an issue."
+    @logger.error "Error: #{e.message}"
     puts e.message
   end
   return nil
@@ -218,7 +260,7 @@ def get_group(fullpath)
   group_list = JSON.parse(rpc("getHostGroups", {}))
   if group_list["data"].nil?
     puts("Unable to retrieve list of host groups from LogicMonitor Account")
-    p group_list
+    @logger.error "Unable to retrieve list of host groups from LogicMonitor Account"
   else
     group_list["data"].each do |group|
       if group["fullPath"].eql?(fullpath.sub(/^\//, ""))    #Check to see if group exists

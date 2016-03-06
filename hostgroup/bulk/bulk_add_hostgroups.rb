@@ -30,17 +30,27 @@ require 'net/https'
 require 'optparse'
 require 'pp'
 require 'date'
+require 'logger'
 
 def main
 
-  file = @file
-  #this part is actually awesome. CSV doesn't allow quoting that doesn't encapsulate an entire column/row thingy.
-  #in order to allow quoting in an appliesTo (which is pretty common), we make the quote_character of the csv object
-  #a character that doesn't appear in our csv (hopefully)
-  csv = CSV.open(file, quote_char: "\x00", :headers => true)
+  @logger = Logger.new("bulk_add_hostgroups.log")
+  @logger.datetime_format = '%Y-%m-%d %H:%M:%S'
+  file  = @file
+  begin
+    #this part is actually awesome. CSV doesn't allow quoting that doesn't encapsulate an entire column/row thingy.
+    #in order to allow quoting in an appliesTo (which is pretty common), we make the quote_character of the csv object
+    #a character that doesn't appear in our csv (hopefully)
+    csv = CSV.open(file, quote_char: "\x00", :headers => true)  
+  rescue Errno::ENOENT => e
+    puts "Invalid CSV entered. Please make sure path/filename are correct."
+    @logger.error "Invalid CSV entered. Please make sure path/filename are correct."
+    exit(1)
+  end
 
-  #csv = CSV.new(filecontent, {:headers => true})
-
+  @successful_uploads = []
+  @failed_uploads = []
+  @total_uploads = 0
   csv.each do |row|
     #Skip row in loop if the line is commented out (A.K.A. starts with a '#' character)
     next if row[0].start_with?('#')
@@ -48,7 +58,8 @@ def main
     # validates presence of the dynamic group name field
 
     if row["groupname"].nil?
-      puts "Error: All host gropus MUST have a valid groupname entered"
+      puts "Error: All host groups MUST have a valid groupname entered"
+      @logger.error "All host groups MUST have a valid groupname entered"
       exit(1)
     end
 
@@ -60,9 +71,10 @@ def main
     @properties = row["properties"] 
 
     #make sure that the group path entered follows Linux directory structure (for consistency and user ease-of-use)
-    if not @grouppath.start_with?("/")
+    unless @grouppath.start_with?("/")
         puts "Error: Invalid group path entered, must begin with '/'"
-        exit(1)
+        @logger.error "Invalid group path entered for #{@groupname}, must begin with '/'"
+        @grouppath.insert(0, '/')
     end
     @grouppath.slice!(0)
 
@@ -93,7 +105,16 @@ def main
                    "description" => @description
                   }
       static_args = static_args.merge(hash_to_lm(properties_to_hash(@properties)))
-      puts rpc("addHostGroup", static_args)
+      response = rpc("addHostGroup", static_args)
+      response_json = JSON.parse(response)
+      if response_json["status"] == 200
+        puts response
+        @successful_uploads << @groupname
+      else
+        puts "Error: #{response}"
+        @logger.error "Error adding hostgroup #{@groupname}: #{response}"
+        @failed_uploads << @groupname
+      end
     #if appliesTo is nil, assume group should be static
     else
       dynamic_args = {"alertEnable" => false, 
@@ -104,12 +125,27 @@ def main
                     "description" => @description
                    }
       dynamic_args = dynamic_args.merge(hash_to_lm(properties_to_hash(@properties)))
-      puts rpc("addHostGroup", dynamic_args)
+      response = rpc("addHostGroup", dynamic_args)
+      response_json = JSON.parse(response)
+      if response_json["status"] == 200
+        puts response
+        @successful_uploads << @groupname
+      else
+        puts "Error: #{response}"
+        @logger.error "Error adding hostgroup #{@groupname}: #{response}"
+        @failed_uploads << @groupname
+      end
     end
-
+    @total_uploads = @total_uploads + 1
   end
-  puts
+  puts "------------------Bulk Add Hostgroup Summary------------------"
+  puts "Number of Uploads Attempted: #{@total_uploads}"
+  puts "Number of Groups Successfully Uploaded: #{@successful_uploads.size}"
+  puts "Groups Successfully Uploaded: #{@successful_uploads}"
+  puts "Number of Groups Unsucessfully Uploaded: #{@failed_uploads.size}"
+  puts "Groups Unsuccessfully Uploaded: #{@failed_uploads}"
 end
+
 
 ###################################################################
 #                                                                 #
@@ -160,8 +196,10 @@ def rpc(action, args={})
     return response.body
   rescue SocketError => se
     puts "There was an issue communicating with #{url}. Please make sure everything is correct and try again."
+    @logger.error "There was an issue communicating with #{url}. Please make sure everything is correct and try again."
   rescue Exception => e
     puts "There was an issue."
+    @logger.error "There was an issue: #{e.message}"
     puts e.message
   end
   return nil
@@ -217,6 +255,7 @@ def get_group(fullpath)
   group_list = JSON.parse(rpc("getHostGroups", {}))
   if group_list["data"].nil?
     puts("Unable to retrieve list of host groups from LogicMonitor Account")
+    @logger.error "Unable to retrieve list of host groups from LogicMonitor Account"
   else
     group_list["data"].each do |group|
       if group["fullPath"].eql?(fullpath.sub(/^\//, ""))    #Check to see if group exists
