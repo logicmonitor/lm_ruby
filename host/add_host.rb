@@ -301,7 +301,7 @@ begin
       @options[:properties] = props
     end
     
-    opts.on("-a", "--alertenable", "Turn on alerting for the host") do |p|
+    opts.on("-a", "--alertenable", "Turn on alerting for the host") do |a|
       @options[:properties] = a
     end
 
