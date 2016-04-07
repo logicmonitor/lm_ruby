@@ -302,7 +302,7 @@ begin
     end
     
     opts.on("-a", "--alertenable", "Turn on alerting for the host") do |a|
-      @options[:properties] = a
+      @options[:alertenable] = a
     end
 
   end.parse!
