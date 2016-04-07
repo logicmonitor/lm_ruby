@@ -231,7 +231,7 @@ end
 
 def rpc(action, args={})
   auth_hash = {"c" => @company, "u" => @user, "p" => @password}
-  uri = URI("https://#{company}.logicmonitor.com/santaba/rpc/#{action}")
+  uri = URI("https://#{@company}.logicmonitor.com/santaba/rpc/#{action}")
   uri.query = URI.encode_www_form(args.merge(auth_hash))
   begin
     http = Net::HTTP.new(uri.host, 443)
