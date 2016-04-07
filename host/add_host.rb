@@ -27,7 +27,7 @@ def run(hostname, displayname, collector, description, groups, properties, alert
   if host_exist
     puts "Host already exists in LogicMonitor system."
     puts "Exiting."
-    exit 1
+    exit 0
   else
     puts "adding host to LogicMonitor system"
     return add_host(hostname, displayname, collector, description, groups, properties, alertenable)
