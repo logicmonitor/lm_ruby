@@ -45,7 +45,7 @@ def run(name, install_dir)
       exit 6
     end
   end
-  file_name = "/logicmonitorsetup" + collector["id"].to_s + "_" + get_arch + ".bin"
+  file_name = "/logicmonitorsetup" + "_" + get_arch + ".bin"
   install_file = install_dir + file_name
   if File.exists?(install_file)
     puts "Installer file exists."
