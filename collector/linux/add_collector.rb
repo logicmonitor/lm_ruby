@@ -287,7 +287,7 @@ end
 @company = @options[:company]
 @user = @options[:user]
 @password = @options[:password]
-@name = `hostname -f`.strip
+@name = `hostname`
 @debug = @options[:debug]
 @install_dir = "/usr/local/logicmonitor"
 
