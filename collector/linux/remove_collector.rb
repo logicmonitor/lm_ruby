@@ -42,7 +42,7 @@ def run(name, install_dir)
     puts "LogicMonitor Watchdog Stopped"
   end
 
-  collector = get_collector(name)  
+  collector = get_collector(name)
   if collector.nil?
     puts "unable to find collector matching #{name}"
   else
@@ -62,7 +62,7 @@ def run(name, install_dir)
   else
     puts "No matching collectors found"
   end
-  
+
 end
 
 
@@ -151,14 +151,13 @@ end
 
 
 # Wrapper function for building LogicMonitor API URL's
-# and executing the associated RPCs 
+# and executing the associated RPCs
 # returns a JSON string (the response from the LogicMonitor API) or nil
 def rpc(action, args={})
   company = @company
   username = @user
   password =  @password
   url = "https://#{company}.logicmonitor.com/santaba/rpc/#{action}?"
-  first_arg = true
   args.each_pair do |key, value|
     url << "#{key}=#{value}&"
   end
@@ -172,8 +171,8 @@ def rpc(action, args={})
     response = http.request(req)
     return response.body
   rescue SocketError => se
-    puts "There was an issue communicating with #{url}. Please make sure everything is correct and try again."
-    puts "Exiting"
+    puts "There was an issue communicating with #{url}. Please make sure everything is correct and try again. Exiting."
+    puts se.message
     exit 3
   rescue Error => e
     puts "There was an issue."
@@ -209,28 +208,28 @@ begin
 rescue OptionParser::MissingArgument => ma
    puts ma.inspect
    opt_error = true
-end  
+end
 
 begin
   raise OptionParser::MissingArgument if @options[:company].nil?
 rescue  OptionParser::MissingArgument => ma
   puts "Missing option: -c <company>"
    opt_error = true
-end  
+end
 
 begin
   raise OptionParser::MissingArgument if @options[:user].nil?
 rescue  OptionParser::MissingArgument => ma
   puts "Missing option: -u <username>"
   opt_error = true
-end  
+end
 
 begin
   raise OptionParser::MissingArgument if @options[:password].nil?
 rescue  OptionParser::MissingArgument => ma
   puts "Missing option: -p <password>"
   opt_error = true
-end  
+end
 
 if opt_error
   exit 1

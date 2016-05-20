@@ -33,21 +33,19 @@ def main
   file  = @file
   filecontent = File.open(file)
 
-  groupname = "lmsupport-import-#{Time.now.strftime "%Y%m%d%H%M%S"}".chomp
   string = rpc("getHostGroups") #makes API call to grab host group
   hostgroups= JSON.parse(string)
   my_arr=hostgroups['data']
-  
+
   group_name_id_map = Hash.new
-  my_arr.each do |value| 
+  my_arr.each do |value|
     if value["appliesTo"].eql?""
       group_name_id_map[value["fullPath"]] = value["id"]
     end
   end
-      
-  lm_group_id = group_name_id_map[groupname]
+
   csv = CSV.new(filecontent, {:headers => true})
-  
+
   csv.each do |row|
     #Skip row in loop if the line is commented out (A.K.A. starts with a '#' character)
     next if row[0].start_with?('#')
@@ -72,21 +70,21 @@ def main
       if (host["hostName"].eql?@hostname and host["agentId"].to_s.eql?@collector_id) or host["displayedAs"].eql?@display_name
         @hostId = host["id"]
       end
-    end   
- 
-    # check for precense of a hostgroup and if there is, find the groupids 
-    group_list = build_group_list(row["group_list"], "", group_name_id_map)
-        
+    end
 
- 
+    # check for precense of a hostgroup and if there is, find the groupids
+    group_list = build_group_list(row["group_list"], group_name_id_map)
+
+
+
     puts "Updating host #{@hostname} in LogicMonitor Account"
     puts "RPC Response:"
 
-    update_args = {"hostName" =>@hostname, 
-                   "id" => @hostId, 
-                   "displayedAs" =>@display_name, 
-                   "agentId" => @collector_id, 
-                   "hostGroupIds" => group_list.to_s, 
+    update_args = {"hostName" =>@hostname,
+                   "id" => @hostId,
+                   "displayedAs" =>@display_name,
+                   "agentId" => @collector_id,
+                   "hostGroupIds" => group_list.to_s,
                    "description" => @description
                   }
 
@@ -101,8 +99,7 @@ end
 def properties_to_hash(properties)
   property_hash = {}
   index = 0
-  properties_valid = properties || ''
-  
+
   if not properties.nil?
     props = properties.split(":")
     props.each do |p|
@@ -141,7 +138,8 @@ def rpc(action, args={})
     response = http.request(req)
     return response.body
   rescue SocketError => se
-    puts "There was an issue communicating with #{url}. Please make sure everything is correct and try again."
+    puts "There was an issue communicating with #{uri}. Please make sure everything is correct and try again."
+    puts se.message
   rescue Exception => e
     puts "There was an issue."
     puts e.message
@@ -163,7 +161,7 @@ def group_id_map(fullpath)
   return group_name_id_map[fullpath]
 end
 
-def build_group_list(fullpaths, import_group_id, map)
+def build_group_list(fullpaths, map)
   fullpathids = ""
   if not fullpaths.nil?
     path_array = fullpaths.split(":")
@@ -178,7 +176,7 @@ def build_group_list(fullpaths, import_group_id, map)
       end
     end
   end
- 
+
   return fullpathids
 end
 
@@ -244,7 +242,6 @@ end
 #                                                                 #
 ###################################################################
 
-pt_error = false
 begin
   @options = {}
   OptionParser.new do |opts|
@@ -269,40 +266,40 @@ begin
     opts.on("-f", "--file FILE", "A CSV file contaning the hosts to be added") do |f|
       @options[:file] = f
     end
-    
+
   end.parse!
 rescue OptionParser::MissingArgument => ma
   puts ma.inspect
   opt_error = true
-end  
+end
 
 begin
   raise OptionParser::MissingArgument if @options[:company].nil?
 rescue  OptionParser::MissingArgument => ma
   puts "Missing option: -c <company>"
   opt_error = true
-end  
+end
 
 begin
   raise OptionParser::MissingArgument if @options[:user].nil?
 rescue  OptionParser::MissingArgument => ma
   puts "Missing option: -u <username>"
   opt_error = true
-end  
+end
 
 begin
   raise OptionParser::MissingArgument if @options[:password].nil?
 rescue  OptionParser::MissingArgument => ma
   puts "Missing option: -p <password>"
   opt_error = true
-end  
+end
 
 begin
   raise OptionParser::MissingArgument if @options[:file].nil?
 rescue  OptionParser::MissingArgument => ma
   puts "Missing option: -f <file>"
   opt_error = true
-end  
+end
 
 if opt_error
   exit 1

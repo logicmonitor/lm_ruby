@@ -35,7 +35,7 @@ def main
 
   groupname = "lmsupport-import-#{Time.now.strftime "%Y%m%d%H%M%S"}".chomp
   rpc("addHostGroup", {"alertEnable" => false, "name" => groupname})
- 
+
   string = rpc("getHostGroups") #makes API call to grab host group
   hostgroups= JSON.parse(string)
   my_arr=hostgroups['data']
@@ -46,7 +46,7 @@ def main
 
   lm_group_id = group_name_id_map[groupname]
   csv = CSV.new(filecontent, {:headers => true})
-  
+
   csv.each do |row|
     #Skip row in loop if the line is commented out (A.K.A. starts with a '#' character)
     next if row[0].start_with?('#')
@@ -69,28 +69,28 @@ def main
     else
       @display_name = row["display_name"]
     end
-    
-    # check for precense of a hostgroup and if there is, find the groupids 
+
+    # check for precense of a hostgroup and if there is, find the groupids
     group_list = build_group_list(row["group_list"], lm_group_id, group_name_id_map)
-    
+
     # check if properties are nil
 
     puts "Adding host #{@hostname} to LogicMonitor"
     puts "RPC Response:"
 
-    host_args = {"hostName" =>@hostname, 
-                 "displayedAs" =>@display_name, 
-                 "agentId" => @collector_id, 
-                 "hostGroupIds" => group_list.to_s, 
+    host_args = {"hostName" =>@hostname,
+                 "displayedAs" =>@display_name,
+                 "agentId" => @collector_id,
+                 "hostGroupIds" => group_list.to_s,
                  "description" => @description,
                  "link" => @link
                 }
-       
+
     host_args = host_args.merge(hash_to_lm(properties_to_hash(@properties)))
 
 
     puts rpc("addHost", host_args)
-    
+
   end
 end
 
@@ -137,6 +137,7 @@ def rpc(action, args={})
     return response.body
   rescue SocketError => se
     puts "There was an issue communicating with #{url}. Please make sure everything is correct and try again."
+    puts se.message
   rescue Exception => e
     puts "There was an issue."
     puts e.message
@@ -235,7 +236,6 @@ end
 #                                                                 #
 ###################################################################
 
-pt_error = false
 begin
   @options = {}
   OptionParser.new do |opts|
@@ -260,40 +260,40 @@ begin
     opts.on("-f", "--file FILE", "A CSV file contaning the hosts to be added") do |f|
       @options[:file] = f
     end
-    
+
   end.parse!
 rescue OptionParser::MissingArgument => ma
   puts ma.inspect
   opt_error = true
-end  
+end
 
 begin
   raise OptionParser::MissingArgument if @options[:company].nil?
 rescue  OptionParser::MissingArgument => ma
   puts "Missing option: -c <company>"
   opt_error = true
-end  
+end
 
 begin
   raise OptionParser::MissingArgument if @options[:user].nil?
 rescue  OptionParser::MissingArgument => ma
   puts "Missing option: -u <username>"
   opt_error = true
-end  
+end
 
 begin
   raise OptionParser::MissingArgument if @options[:password].nil?
 rescue  OptionParser::MissingArgument => ma
   puts "Missing option: -p <password>"
   opt_error = true
-end  
+end
 
 begin
   raise OptionParser::MissingArgument if @options[:file].nil?
 rescue  OptionParser::MissingArgument => ma
   puts "Missing option: -f <file>"
   opt_error = true
-end  
+end
 
 if opt_error
   exit 1

@@ -61,8 +61,7 @@ end
 def rpc(action, args={})
   company = @company
   username = @user
-  password = @password 
-  test = URI(URI.encode password)
+  password = @password
   url = "https://#{company}.logicmonitor.com/santaba/rpc/#{action}?"
   args.each_pair do |key, value|
     url << "#{key}=#{value}&"
@@ -78,6 +77,7 @@ def rpc(action, args={})
     return response.body
   rescue SocketError => se
     puts "There was an issue communicating with #{url}. Please make sure everything is correct and try again."
+    puts se.message
   rescue Exception => e
     puts "There was an issue."
     puts e.message
@@ -111,40 +111,40 @@ begin
     opts.on("-f", "--file FILE", "A CSV file contaning the hosts to be added") do |f|
       @options[:file] = f
     end
-    
+
   end.parse!
 rescue OptionParser::MissingArgument => ma
    puts ma.inspect
    opt_error = true
-end  
+end
 
 begin
   raise OptionParser::MissingArgument if @options[:company].nil?
 rescue  OptionParser::MissingArgument => ma
   puts "Missing option: -c <company>"
    opt_error = true
-end  
+end
 
 begin
   raise OptionParser::MissingArgument if @options[:user].nil?
 rescue  OptionParser::MissingArgument => ma
   puts "Missing option: -u <username>"
   opt_error = true
-end  
+end
 
 begin
   raise OptionParser::MissingArgument if @options[:password].nil?
 rescue  OptionParser::MissingArgument => ma
   puts "Missing option: -p <password>"
   opt_error = true
-end  
+end
 
 begin
   raise OptionParser::MissingArgument if @options[:file].nil?
 rescue  OptionParser::MissingArgument => ma
   puts "Missing option: -f <file>"
   opt_error = true
-end  
+end
 
 if opt_error
   exit 1

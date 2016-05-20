@@ -58,12 +58,14 @@ def add_host(hostname, displayname, collector, description, groups, properties, 
   puts "Creating LogicMonitor host \"#{hostname}\""
   groups.each do |group|
     if get_group(group).nil?
-      puts "Couldn't find parent group #{group}. Creating." 
+      puts "Couldn't find parent group #{group}. Creating."
       recursive_group_create( group, nil, nil, true)
     end
   end
   add_resp = rpc("addHost", build_host_hash(hostname, displayname, collector, description, groups, properties, alertenable))
-  #puts add_resp
+  if @debug
+      puts add_resp
+  end
 end
 
 ###################################################################
@@ -215,13 +217,13 @@ end
 
 # return a group object if "fullpath" exists or nil
 def get_group(fullpath)
-  returnval = nil 
+  returnval = nil
   group_list = JSON.parse(rpc("getHostGroups", {}))
-  if group_list["data"].nil? 
+  if group_list["data"].nil?
     puts("Unable to retrieve list of host groups from LogicMonitor Account")
   else
     group_list["data"].each do |group|
-      if group["fullPath"].eql?(fullpath.sub("/", ""))    #Check to see if group exists          
+      if group["fullPath"].eql?(fullpath.sub("/", ""))    #Check to see if group exists
         returnval = group
       end
     end
@@ -242,6 +244,7 @@ def rpc(action, args={})
     return response.body
   rescue SocketError => se
     puts "There was an issue communicating with #{url}. Please make sure everything is correct and try again."
+    puts se.message
   rescue Exception => e
     puts "There was an issue."
     puts e.message
@@ -280,11 +283,11 @@ begin
     opts.on("-C", "--collector COLLECTOR", "Collector to monitor this host") do |collector|
       @options[:collector] = collector
     end
-  
+
     opts.on("-H", "--name HOSTNAME", "Hostname of this device") do |hname|
       @options[:name] = hname
     end
-    
+
     opts.on("-n", "--displayname DISPLAYNAME", "How this host should appear in LogicMonitor account") do |n|
       @options[:displayname] = n
     end
@@ -300,7 +303,7 @@ begin
     opts.on("-P", "--properties \{\"property1\":\"value1\",\"property2\":\"value2\",...\}", "JSON hash of host properties") do |props|
       @options[:properties] = props
     end
-    
+
     opts.on("-a", "--alertenable", "Turn on alerting for the host") do |p|
       @options[:properties] = a
     end
@@ -309,42 +312,42 @@ begin
 rescue OptionParser::MissingArgument => ma
    puts ma.inspect
    opt_error = true
-end  
+end
 
 begin
   raise OptionParser::MissingArgument if @options[:company].nil?
 rescue  OptionParser::MissingArgument => ma
   puts "Missing option: -c <company>"
    opt_error = true
-end  
+end
 
 begin
   raise OptionParser::MissingArgument if @options[:user].nil?
 rescue  OptionParser::MissingArgument => ma
   puts "Missing option: -u <username>"
   opt_error = true
-end  
+end
 
 begin
   raise OptionParser::MissingArgument if @options[:password].nil?
 rescue  OptionParser::MissingArgument => ma
   puts "Missing option: -p <password>"
   opt_error = true
-end  
+end
 
 begin
   raise OptionParser::MissingArgument if @options[:collector].nil?
 rescue  OptionParser::MissingArgument => ma
   puts "Missing option: -C <collector>"
   opt_error = true
-end  
+end
 
 begin
   raise OptionParser::MissingArgument if @options[:name].nil?
 rescue  OptionParser::MissingArgument => ma
   puts "Missing option: -H <hostname>"
   opt_error = true
-end  
+end
 
 if opt_error
   exit 1
@@ -358,6 +361,7 @@ end
 @hostname = @options[:name]
 
 #optional/default inputs
+@debug = @options[:debug]
 @displayname = @options[:displayname] || @hostname
 @description = @options[:description] || ""
 

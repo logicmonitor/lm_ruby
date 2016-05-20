@@ -12,7 +12,7 @@ This repository is not a complete set of scripts required to fully manage your L
 
 ####Upcoming features
 - For bulk addition of hosts, the ability to create host groups to an arbitrary depth as part of the addition.
-- 
+-
 
 ####Platform specific tools
 The following scripts are for managing specific types of devices.
@@ -125,8 +125,8 @@ Usage: sdt_host.rb -c <company> -u <user> -p <password> -H <hostname> [-C <colle
     -D, --duration DURATION          How long this device should be in scheduled downtime. Format: 4d 6h 25
 ```
 
- 
-###mass-upload/bulk_add_hosts.rb 
+
+###mass-upload/bulk_add_hosts.rb
 This script parses a CSV formated list of hosts and adds them to monitoring.
 
 ```
@@ -136,14 +136,14 @@ Usage: ruby bulk_add_hosts.rb -c <company> -u <user> -p <password> -f <file>
     -c, --company COMPANY            LogicMonitor Account
     -u, --user USERNAME              LogicMonitor user name
     -p, --password PASSWORD          LogicMonitor password
-    -f, --file FILE                  A CSV file contaning the hosts to be added. 
+    -f, --file FILE                  A CSV file contaning the hosts to be added.
 ```
 
 We have provided a sample CSV file [example.csv](./host/bulk/example.csv) to show the required set and order of the columns. This script currently requires any host groups specified in the script to already exist in the account.
 To make sure that bulk_add_hosts can read the CSV file, you need to specify either the full path to the CSV file OR the relative path from the current working directory.
 
 ###mass-export/bulk_export_hosts.rb
-This scipt exports all of your hosts into a CSV file 
+This scipt exports all of your hosts into a CSV file
 
 ```
 $> ruby bulk_export_hosts.rb -h
