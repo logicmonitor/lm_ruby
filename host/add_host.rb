@@ -27,7 +27,7 @@ def run(hostname, displayname, collector, description, groups, properties, alert
   if host_exist
     puts "Host already exists in LogicMonitor system."
     puts "Exiting."
-    exit 1
+    exit 0
   else
     puts "adding host to LogicMonitor system"
     return add_host(hostname, displayname, collector, description, groups, properties, alertenable)
@@ -231,7 +231,7 @@ end
 
 def rpc(action, args={})
   auth_hash = {"c" => @company, "u" => @user, "p" => @password}
-  uri = URI("https://#{company}.logicmonitor.com/santaba/rpc/#{action}")
+  uri = URI("https://#{@company}.logicmonitor.com/santaba/rpc/#{action}")
   uri.query = URI.encode_www_form(args.merge(auth_hash))
   begin
     http = Net::HTTP.new(uri.host, 443)
@@ -301,8 +301,8 @@ begin
       @options[:properties] = props
     end
     
-    opts.on("-a", "--alertenable", "Turn on alerting for the host") do |p|
-      @options[:properties] = a
+    opts.on("-a", "--alertenable", "Turn on alerting for the host") do |a|
+      @options[:alertenable] = a
     end
 
   end.parse!
