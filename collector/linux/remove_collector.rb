@@ -24,7 +24,7 @@ require 'optparse'
 
 
 #runs the utility functions and controls the flow of the program
-def run(name, install_dir)
+def run(identifier, install_dir)
 
   agent_status = `service logicmonitor-agent status`
   if agent_status.include?("running") and not agent_status.include?("not running")
@@ -42,9 +42,9 @@ def run(name, install_dir)
     puts "LogicMonitor Watchdog Stopped"
   end
 
-  collector = get_collector(name)
+  collector = get_collector(identifier)
   if collector.nil?
-    puts "unable to find collector matching #{name}"
+    puts "unable to find collector matching #{identifier}"
   else
     file_name = "/logicmonitorsetup" + collector["id"].to_s + "_" + get_arch + ".bin"
     install_file = install_dir + file_name
@@ -58,7 +58,7 @@ def run(name, install_dir)
   end
   if collector
     puts "Matching collector found on server"
-    delete_collector(name)
+    delete_collector(collector)
   else
     puts "No matching collectors found"
   end
@@ -72,9 +72,8 @@ end
 #                                                                 #
 ###################################################################
 
-def delete_collector(name)
+def delete_collector(collector)
   puts "trying to delete collector"
-  collector = get_collector(name)
   delete_response = rpc("deleteAgent", {"id" => collector["id"]})
   if @debug
     puts delete_response
@@ -84,7 +83,7 @@ end
 # Checks for the existance of a collector
 # with description field == desc
 # Returns a collector object or nil
-def get_collector(name)
+def get_collector(identifier)
   collector = nil
   collector_list_json = rpc("getAgents", {})
   if @debug
@@ -96,13 +95,12 @@ def get_collector(name)
       puts "List of existing collectors successfully retrieved"
     end
     collector_list["data"].each do |c|
-      if c["description"].eql?(name)
-        if @debug
-          puts "Found collector with name matching #{name}"
-        end
-        collector = c
-      end
-    end
+        if c["description"].downcase.eql?(identifier.downcase)
+          if @debug
+              puts "Found collector matching #{identifier}"
+          end
+          collector = c
+        end    end
   else
     puts "Unable to retieve the list of existing collectors."
     puts "Server responded with #{collector_list_json}"
@@ -204,6 +202,10 @@ begin
     opts.on("-p", "--password PASSWORD", "LogicMonitor password") do |p|
       @options[:password] = p
     end
+
+    opts.on("-D", "--description DESCRIPTION", "Collector description") do |d|
+      @options[:description] = d
+    end
   end.parse!
 rescue OptionParser::MissingArgument => ma
    puts ma.inspect
@@ -235,9 +237,6 @@ if opt_error
   exit 1
 end
 
-#
-# RightScale Input handling here.
-#
 @company = @options[:company]
 @user = @options[:user]
 @password = @options[:password]
@@ -245,5 +244,11 @@ end
 @debug = @options[:debug]
 @install_dir = "/usr/local/logicmonitor"
 
+if @options[:description].nil?
+    @identifier = @name = `hostname -f`.strip
+else
+    @identifier = @options[:description]
+end
+
 # Execute the run function.
-run(@name, @install_dir)
+run(@identifier, @install_dir)
