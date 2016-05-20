@@ -25,42 +25,15 @@ require 'optparse'
 
 #runs the utility functions and controls the flow of the program
 def run(identifier, install_dir)
-
-  agent_status = `service logicmonitor-agent status`
-  if agent_status.include?("running") and not agent_status.include?("not running")
-    puts "LogicMonitor collector is running"
-    puts `service logicmonitor-agent stop`
-  else
-    puts "LogicMonitor Agent Stopped"
-  end
-
-  watchdog_status = `service logicmonitor-watchdog status`
-  if watchdog_status.include?("running") and not watchdog_status.include?("not running")
-    puts "LogicMonitor watchdog is running"
-    puts `service logicmonitor-watchdog stop`
-  else
-    puts "LogicMonitor Watchdog Stopped"
-  end
-
   collector = get_collector(identifier)
-  if collector.nil?
-    puts "unable to find collector matching #{identifier}"
-  else
-    file_name = "/logicmonitorsetup" + collector["id"].to_s + "_" + get_arch + ".bin"
-    install_file = install_dir + file_name
-    agent_file = install_dir + "/agent/conf/agent.conf"
-    if File.exists?(agent_file)
-      uninstall_collector(install_dir)
-    end
-    if File.exists?(install_file)
-      delete_installer(install_file)
-    end
-  end
   if collector
     puts "Matching collector found on server"
+    stop_services()
     delete_collector(collector)
+    delete_installer(install_dir, collector)
+
   else
-    puts "No matching collectors found"
+    puts "unable to find collector matching #{identifier}"
   end
 
 end
@@ -110,17 +83,42 @@ def get_collector(identifier)
   collector
 end
 
+def delete_installer(install_dir, collector)
+    file_name = "/logicmonitorsetup" + collector["id"].to_s + "_" + get_arch + ".bin"
+    install_file = install_dir + file_name
+    agent_file = install_dir + "/agent/conf/agent.conf"
+    if File.exists?(agent_file)
+      uninstall_collector(install_dir)
+    end
+    if File.exists?(install_file)
+        puts "Deleting install file"
+        `rm #{install_file}`
+    end
+end
+
+def stop_services()
+    agent_status = `service logicmonitor-agent status`
+    if agent_status.include?("running") and not agent_status.include?("not running")
+      puts "LogicMonitor collector is running"
+      puts `service logicmonitor-agent stop`
+    else
+      puts "LogicMonitor Agent Stopped"
+    end
+
+    watchdog_status = `service logicmonitor-watchdog status`
+    if watchdog_status.include?("running") and not watchdog_status.include?("not running")
+      puts "LogicMonitor watchdog is running"
+      puts `service logicmonitor-watchdog stop`
+    else
+      puts "LogicMonitor Watchdog Stopped"
+    end
+end
+
 ###################################################################
 #                                                                 #
 #   Functions for handling the LogicMonitor Collector Installer   #
 #                                                                 #
 ###################################################################
-
-# Create the installer file
-def delete_installer(install_file)
-  puts "Deleting install file"
-  `rm #{install_file}`
-end
 
 #returns the architecture of the current device
 def get_arch
