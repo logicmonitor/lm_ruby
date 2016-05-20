@@ -243,7 +243,7 @@ def rpc(action, args={})
     response = http.request(req)
     return response.body
   rescue SocketError => se
-    puts "There was an issue communicating with #{url}. Please make sure everything is correct and try again."
+    puts "There was an issue communicating with #{uri}. Please make sure everything is correct and try again."
     puts se.message
   rescue Exception => e
     puts "There was an issue."
@@ -304,8 +304,8 @@ begin
       @options[:properties] = props
     end
 
-    opts.on("-a", "--alertenable", "Turn on alerting for the host") do |p|
-      @options[:properties] = a
+    opts.on("-a", "--alertenable", "Turn on alerting for the host") do |a|
+      @options[:alertenable] = a
     end
 
   end.parse!

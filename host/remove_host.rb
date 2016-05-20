@@ -356,5 +356,6 @@ end
 
 #optional/default inputs
 @displayname = @options[:displayname] || @hostname
+@debug = @options[:debug]
 
 run(@hostname, @displayname, @collector)
