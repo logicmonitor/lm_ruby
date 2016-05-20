@@ -1,4 +1,6 @@
 language: ruby
 rvm:
     - ruby-1.9.3-p484
-script: "ruby -wc ."
+install:
+    - gem install rubocop
+script: 'rubocop'
