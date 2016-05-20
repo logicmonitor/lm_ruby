@@ -41,6 +41,7 @@ Usage: add_collector.rb -c <company> -u <user> -p <password> [-d]
     -c, --company COMPANY            LogicMonitor Account
     -u, --user USERNAME              LogicMonitor user name
     -p, --password PASSWORD          LogicMonitor password
+    -D, --description DESCRIPTION    Collector description
 ```
 ###collector/linux/remove_collector.rb
 This idempotent script removes and existing LogicMonitor collector from a Linux device. This script assumes that you are running the script on the machine that you want to remove a collector from. For more information about collector management [click here](http://help.logicmonitor.com/using/managing-collectors/).
@@ -52,6 +53,7 @@ Usage: add_collector.rb -c <company> -u <user> -p <password> [-d]
     -c, --company COMPANY            LogicMonitor Account
     -u, --user USERNAME              LogicMonitor user name
     -p, --password PASSWORD          LogicMonitor password
+    -D, --description DESCRIPTION    Collector description
 ```
 
 ###alerts/get_count_alerts.rb
