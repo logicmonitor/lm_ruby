@@ -26,11 +26,14 @@ def run(hostname, displayname, collector)
   host_exist = get_host_by_displayname(displayname) || get_host_by_hostname(hostname, collector)
   if host_exist
     delete_resp = rpc("deleteHost", {"hostId" => host_exist["id"], "deleteFromSystem" => true})
+    if @debug
+        puts delete_resp
+    end
   else
     puts "Unable to find matching host"
     puts "Exiting"
     exit 1
-  end 
+  end
 end
 
 ###################################################################
@@ -57,12 +60,14 @@ def remove_host(hostname, displayname, collector, description, groups, propertie
   puts "d LogicMonitor host \"#{hostname}\""
   groups.each do |group|
     if get_group(group).nil?
-      puts "Couldn't find parent group #{group}. Creating." 
+      puts "Couldn't find parent group #{group}. Creating."
       recursive_group_create( group, nil, nil, true)
     end
   end
   add_resp = rpc("addHost", build_host_hash(hostname, displayname, collector, description, groups, properties, alertenable))
-  #puts add_resp
+  if @debug
+      puts add_resp
+  end
 end
 
 ###################################################################
@@ -214,13 +219,13 @@ end
 
 # return a group object if "fullpath" exists or nil
 def get_group(fullpath)
-  returnval = nil 
+  returnval = nil
   group_list = JSON.parse(rpc("getHostGroups", {}))
-  if group_list["data"].nil? 
+  if group_list["data"].nil?
     puts("Unable to retrieve list of host groups from LogicMonitor Account")
   else
     group_list["data"].each do |group|
-      if group["fullPath"].eql?(fullpath.sub("/", ""))    #Check to see if group exists          
+      if group["fullPath"].eql?(fullpath.sub("/", ""))    #Check to see if group exists
         returnval = group
       end
     end
@@ -233,7 +238,6 @@ def rpc(action, args={})
   username = @user
   password = @password
   url = "https://#{company}.logicmonitor.com/santaba/rpc/#{action}?"
-  first_arg = true
   args.each_pair do |key, value|
     url << "#{key}=#{value}&"
   end
@@ -249,6 +253,7 @@ def rpc(action, args={})
     return response.body
   rescue SocketError => se
     puts "There was an issue communicating with #{url}. Please make sure everything is correct and try again."
+    puts se.message
   rescue Exception => e
     puts "There was an issue."
     puts e.message
@@ -287,11 +292,11 @@ begin
     opts.on("-C", "--collector COLLECTOR", "Collector to monitor this host") do |collector|
       @options[:collector] = collector
     end
-    
+
     opts.on("-H", "--name HOSTNAME", "Hostname of this device") do |hname|
       @options[:name] = hname
     end
-    
+
     opts.on("-n", "--displayname DISPLAYNAME", "The human readable name for the host in your LogicMonitor account") do |n|
       @options[:displayname] = n
     end
@@ -300,35 +305,35 @@ begin
 rescue OptionParser::MissingArgument => ma
    puts ma.inspect
    opt_error = true
-end  
+end
 
 begin
   raise OptionParser::MissingArgument if @options[:company].nil?
 rescue  OptionParser::MissingArgument => ma
   puts "Missing option: -c <company>"
    opt_error = true
-end  
+end
 
 begin
   raise OptionParser::MissingArgument if @options[:user].nil?
 rescue  OptionParser::MissingArgument => ma
   puts "Missing option: -u <username>"
   opt_error = true
-end  
+end
 
 begin
   raise OptionParser::MissingArgument if @options[:password].nil?
 rescue  OptionParser::MissingArgument => ma
   puts "Missing option: -p <password>"
   opt_error = true
-end  
+end
 
 begin
   raise OptionParser::MissingArgument if @options[:collector].nil?
 rescue  OptionParser::MissingArgument => ma
   puts "Missing option: -H <hostname>"
   opt_error = true
-end  
+end
 
 
 begin
@@ -336,7 +341,7 @@ begin
 rescue  OptionParser::MissingArgument => ma
   puts "Missing option: -H <hostname>"
   opt_error = true
-end  
+end
 
 if opt_error
   exit 1
@@ -351,5 +356,6 @@ end
 
 #optional/default inputs
 @displayname = @options[:displayname] || @hostname
+@debug = @options[:debug]
 
 run(@hostname, @displayname, @collector)

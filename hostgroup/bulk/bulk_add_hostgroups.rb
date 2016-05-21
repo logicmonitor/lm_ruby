@@ -56,8 +56,8 @@ def main
     @groupname = row["groupname"]
     @appliesTo = row["appliesTo"]
     @grouppath = row["grouppath"]
-    @description = row["description"] 
-    @properties = row["properties"] 
+    @description = row["description"]
+    @properties = row["properties"]
 
     #make sure that the group path entered follows Linux directory structure (for consistency and user ease-of-use)
     if not @grouppath.start_with?("/")
@@ -67,7 +67,7 @@ def main
     @grouppath.slice!(0)
 
     #makes API call to grab existing host groups
-    string = rpc("getHostGroups") 
+    string = rpc("getHostGroups")
     hostgroups= JSON.parse(string)
     my_arr=hostgroups['data']
 
@@ -87,20 +87,20 @@ def main
 
     #if appliesTo is not nil, assume group should be dynamic
     if @appliesTo.nil?
-      static_args = {"alertEnable" => false, 
-                   "name" => @groupname, 
-                   "parentId" =>  @parentid, 
+      static_args = {"alertEnable" => false,
+                   "name" => @groupname,
+                   "parentId" =>  @parentid,
                    "description" => @description
                   }
       static_args = static_args.merge(hash_to_lm(properties_to_hash(@properties)))
       puts rpc("addHostGroup", static_args)
     #if appliesTo is nil, assume group should be static
     else
-      dynamic_args = {"alertEnable" => false, 
-                    "dGroup" => true, 
-                    "name" => @groupname, 
-                    "appliesTo" => @appliesTo, 
-                    "parentId" => @parentid, 
+      dynamic_args = {"alertEnable" => false,
+                    "dGroup" => true,
+                    "name" => @groupname,
+                    "appliesTo" => @appliesTo,
+                    "parentId" => @parentid,
                     "description" => @description
                    }
       dynamic_args = dynamic_args.merge(hash_to_lm(properties_to_hash(@properties)))
@@ -159,7 +159,8 @@ def rpc(action, args={})
     response = http.request(req)
     return response.body
   rescue SocketError => se
-    puts "There was an issue communicating with #{url}. Please make sure everything is correct and try again."
+    puts "There was an issue communicating with #{uri}. Please make sure everything is correct and try again."
+    puts se.message
   rescue Exception => e
     puts "There was an issue."
     puts e.message
@@ -168,7 +169,7 @@ def rpc(action, args={})
 end
 
 #function to update the hash map after groups are created
-def group_id_map_update(fullpath, oldmap)
+def group_id_map_update(oldmap)
   string = rpc("getHostGroups") #makes API call to grab host group
   hostgroups= JSON.parse(string)
   my_arr=hostgroups['data']
@@ -192,7 +193,7 @@ def get_parentid(fullpath, map)
        parentid = map[parent_path].to_s
     else
       recursive_group_create(parent_path,false)
-      map = group_id_map_update(fullpath, map)
+      map = group_id_map_update(map)
       parentid = map[parent_path].to_s
     end
 
@@ -264,7 +265,6 @@ end
 #                                                                 #
 ###################################################################
 
-pt_error = false
 begin
   @options = {}
   OptionParser.new do |opts|
@@ -289,40 +289,40 @@ begin
     opts.on("-f", "--file FILE", "A CSV file contaning the hosts to be added") do |f|
       @options[:file] = f
     end
-    
+
   end.parse!
 rescue OptionParser::MissingArgument => ma
   puts ma.inspect
   opt_error = true
-end  
+end
 
 begin
   raise OptionParser::MissingArgument if @options[:company].nil?
 rescue  OptionParser::MissingArgument => ma
   puts "Missing option: -c <company>"
   opt_error = true
-end  
+end
 
 begin
   raise OptionParser::MissingArgument if @options[:user].nil?
 rescue  OptionParser::MissingArgument => ma
   puts "Missing option: -u <username>"
   opt_error = true
-end  
+end
 
 begin
   raise OptionParser::MissingArgument if @options[:password].nil?
 rescue  OptionParser::MissingArgument => ma
   puts "Missing option: -p <password>"
   opt_error = true
-end  
+end
 
 begin
   raise OptionParser::MissingArgument if @options[:file].nil?
 rescue  OptionParser::MissingArgument => ma
   puts "Missing option: -f <file>"
   opt_error = true
-end  
+end
 
 if opt_error
   exit 1

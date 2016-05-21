@@ -43,7 +43,7 @@ def run(hostname, displayname, collector, starttime, endtime)
     puts "Unable to find matching host"
     puts "Exiting"
     exit 1
-  end 
+  end
 end
 
 
@@ -57,7 +57,7 @@ end
 def to_time(timevar)
   offset = get_offset/3600
   zone = ActiveSupport::TimeZone[offset].name
-  Time.zone = zone 
+  Time.zone = zone
   if timevar.nil? or timevar.strip.empty?
      if Time.zone.now.isdst
        return Time.zone.now - (60 * 60)
@@ -99,7 +99,7 @@ def end_time(starttime, duration)
       else
         seconds = seconds + (60 * dur.to_i) #add seconds in the count of minutes
       end
-    end    
+    end
     return endtime + seconds
   else
     return endtime + (60*60) #default of 1 hour
@@ -178,7 +178,7 @@ def get_offset
     puts "Using GMT"
     return 0
   end
-  
+
 end
 
 
@@ -187,7 +187,6 @@ def rpc(action, args={})
   username = @user
   password = @password
   url = "https://#{company}.logicmonitor.com/santaba/rpc/#{action}?"
-  first_arg = true
   args.each_pair do |key, value|
     url << "#{key}=#{value}&"
   end
@@ -203,6 +202,7 @@ def rpc(action, args={})
     return response.body
   rescue SocketError => se
     puts "There was an issue communicating with #{url}. Please make sure everything is correct and try again."
+    puts se.message
   rescue Exception => e
     puts "There was an issue."
     puts e.message
@@ -245,7 +245,7 @@ begin
     opts.on("-C", "--collector COLLECTOR", "The FQDN of the collector monitoring this device (required if -h is set)") do |col|
       @options[:displayname] = col
     end
-    
+
     opts.on("-n", "--displayname DISPLAYNAME", "The human readable name for the host in your LogicMonitor account") do |n|
       @options[:displayname] = n
     end
@@ -262,35 +262,35 @@ begin
 rescue OptionParser::MissingArgument => ma
    puts ma.inspect
    opt_error = true
-end  
+end
 
 begin
   raise OptionParser::MissingArgument if @options[:company].nil?
 rescue  OptionParser::MissingArgument => ma
   puts "Missing option: -c <company>"
    opt_error = true
-end  
+end
 
 begin
   raise OptionParser::MissingArgument if @options[:user].nil?
 rescue  OptionParser::MissingArgument => ma
   puts "Missing option: -u <username>"
   opt_error = true
-end  
+end
 
 begin
   raise OptionParser::MissingArgument if @options[:password].nil?
 rescue  OptionParser::MissingArgument => ma
   puts "Missing option: -p <password>"
   opt_error = true
-end  
+end
 
 begin
   raise OptionParser::MissingArgument if @options[:name].nil?
 rescue  OptionParser::MissingArgument => ma
   puts "Missing option: -H <hostname>"
   opt_error = true
-end  
+end
 
 if opt_error
   exit 1
@@ -301,7 +301,7 @@ end
 @company = @options[:company]
 @user = @options[:user]
 @password = @options[:password]
-@hostname = @options[:name] 
+@hostname = @options[:name]
 
 #optional/default inputs
 @displayname = @options[:displayname] || @hostname

@@ -24,45 +24,18 @@ require 'optparse'
 
 
 #runs the utility functions and controls the flow of the program
-def run(name, install_dir)
-
-  agent_status = `service logicmonitor-agent status`
-  if agent_status.include?("running") and not agent_status.include?("not running")
-    puts "LogicMonitor collector is running"
-    puts `service logicmonitor-agent stop`
-  else
-    puts "LogicMonitor Agent Stopped"
-  end
-
-  watchdog_status = `service logicmonitor-watchdog status`
-  if watchdog_status.include?("running") and not watchdog_status.include?("not running")
-    puts "LogicMonitor watchdog is running"
-    puts `service logicmonitor-watchdog stop`
-  else
-    puts "LogicMonitor Watchdog Stopped"
-  end
-
-  collector = get_collector(name)  
-  if collector.nil?
-    puts "unable to find collector matching #{name}"
-  else
-    file_name = "/logicmonitorsetup" + collector["id"].to_s + "_" + get_arch + ".bin"
-    install_file = install_dir + file_name
-    agent_file = install_dir + "/agent/conf/agent.conf"
-    if File.exists?(agent_file)
-      uninstall_collector(install_dir)
-    end
-    if File.exists?(install_file)
-      delete_installer(install_file)
-    end
-  end
+def run(identifier, install_dir)
+  collector = get_collector(identifier)
   if collector
     puts "Matching collector found on server"
-    delete_collector(name)
+    stop_services()
+    delete_collector(collector)
+    delete_installer(install_dir, collector)
+
   else
-    puts "No matching collectors found"
+    puts "unable to find collector matching #{identifier}"
   end
-  
+
 end
 
 
@@ -72,9 +45,8 @@ end
 #                                                                 #
 ###################################################################
 
-def delete_collector(name)
+def delete_collector(collector)
   puts "trying to delete collector"
-  collector = get_collector(name)
   delete_response = rpc("deleteAgent", {"id" => collector["id"]})
   if @debug
     puts delete_response
@@ -84,7 +56,7 @@ end
 # Checks for the existance of a collector
 # with description field == desc
 # Returns a collector object or nil
-def get_collector(name)
+def get_collector(identifier)
   collector = nil
   collector_list_json = rpc("getAgents", {})
   if @debug
@@ -96,13 +68,12 @@ def get_collector(name)
       puts "List of existing collectors successfully retrieved"
     end
     collector_list["data"].each do |c|
-      if c["description"].eql?(name)
-        if @debug
-          puts "Found collector with name matching #{name}"
-        end
-        collector = c
-      end
-    end
+        if c["description"].downcase.eql?(identifier.downcase)
+          if @debug
+              puts "Found collector matching #{identifier}"
+          end
+          collector = c
+        end    end
   else
     puts "Unable to retieve the list of existing collectors."
     puts "Server responded with #{collector_list_json}"
@@ -112,17 +83,42 @@ def get_collector(name)
   collector
 end
 
+def delete_installer(install_dir, collector)
+    file_name = "/logicmonitorsetup" + collector["id"].to_s + "_" + get_arch + ".bin"
+    install_file = install_dir + file_name
+    agent_file = install_dir + "/agent/conf/agent.conf"
+    if File.exists?(agent_file)
+      uninstall_collector(install_dir)
+    end
+    if File.exists?(install_file)
+        puts "Deleting install file"
+        `rm #{install_file}`
+    end
+end
+
+def stop_services()
+    agent_status = `service logicmonitor-agent status`
+    if agent_status.include?("running") and not agent_status.include?("not running")
+      puts "LogicMonitor collector is running"
+      puts `service logicmonitor-agent stop`
+    else
+      puts "LogicMonitor Agent Stopped"
+    end
+
+    watchdog_status = `service logicmonitor-watchdog status`
+    if watchdog_status.include?("running") and not watchdog_status.include?("not running")
+      puts "LogicMonitor watchdog is running"
+      puts `service logicmonitor-watchdog stop`
+    else
+      puts "LogicMonitor Watchdog Stopped"
+    end
+end
+
 ###################################################################
 #                                                                 #
 #   Functions for handling the LogicMonitor Collector Installer   #
 #                                                                 #
 ###################################################################
-
-# Create the installer file
-def delete_installer(install_file)
-  puts "Deleting install file"
-  `rm #{install_file}`
-end
 
 #returns the architecture of the current device
 def get_arch
@@ -151,14 +147,13 @@ end
 
 
 # Wrapper function for building LogicMonitor API URL's
-# and executing the associated RPCs 
+# and executing the associated RPCs
 # returns a JSON string (the response from the LogicMonitor API) or nil
 def rpc(action, args={})
   company = @company
   username = @user
   password =  @password
   url = "https://#{company}.logicmonitor.com/santaba/rpc/#{action}?"
-  first_arg = true
   args.each_pair do |key, value|
     url << "#{key}=#{value}&"
   end
@@ -172,8 +167,8 @@ def rpc(action, args={})
     response = http.request(req)
     return response.body
   rescue SocketError => se
-    puts "There was an issue communicating with #{url}. Please make sure everything is correct and try again."
-    puts "Exiting"
+    puts "There was an issue communicating with #{url}. Please make sure everything is correct and try again. Exiting."
+    puts se.message
     exit 3
   rescue Error => e
     puts "There was an issue."
@@ -205,40 +200,41 @@ begin
     opts.on("-p", "--password PASSWORD", "LogicMonitor password") do |p|
       @options[:password] = p
     end
+
+    opts.on("-D", "--description DESCRIPTION", "Collector description") do |d|
+      @options[:description] = d
+    end
   end.parse!
 rescue OptionParser::MissingArgument => ma
    puts ma.inspect
    opt_error = true
-end  
+end
 
 begin
   raise OptionParser::MissingArgument if @options[:company].nil?
 rescue  OptionParser::MissingArgument => ma
   puts "Missing option: -c <company>"
    opt_error = true
-end  
+end
 
 begin
   raise OptionParser::MissingArgument if @options[:user].nil?
 rescue  OptionParser::MissingArgument => ma
   puts "Missing option: -u <username>"
   opt_error = true
-end  
+end
 
 begin
   raise OptionParser::MissingArgument if @options[:password].nil?
 rescue  OptionParser::MissingArgument => ma
   puts "Missing option: -p <password>"
   opt_error = true
-end  
+end
 
 if opt_error
   exit 1
 end
 
-#
-# RightScale Input handling here.
-#
 @company = @options[:company]
 @user = @options[:user]
 @password = @options[:password]
@@ -246,5 +242,11 @@ end
 @debug = @options[:debug]
 @install_dir = "/usr/local/logicmonitor"
 
+if @options[:description].nil?
+    @identifier = @name = `hostname -f`.strip
+else
+    @identifier = @options[:description]
+end
+
 # Execute the run function.
-run(@name, @install_dir)
+run(@identifier, @install_dir)

@@ -24,16 +24,16 @@ require 'net/https'
 require 'optparse'
 
 #runs the utility functions and controls the flow of the program
-def run(name, install_dir)
+def run(identifier, install_dir)
   puts "checking collector"
-  collector = get_collector(name)
+  collector = get_collector(identifier)
   if collector
     puts "Matching collector found on server"
   else
     puts "No matching collectors found"
-    create_collector(name)
+    create_collector(identifier)
+    collector = get_collector(identifier)
   end
-  collector = get_collector(name)  
   unless Dir.exists?(install_dir)
     puts "Creating LogicMonitor installation directory"
     begin
@@ -59,7 +59,7 @@ def run(name, install_dir)
     puts "Skipping installation."
   else
     install_collector(install_dir, file_name)
-  end 
+  end
   ensure_running()
 end
 
@@ -70,9 +70,9 @@ end
 #                                                                 #
 ###################################################################
 
-def create_collector(name)
+def create_collector(identifier)
   puts "trying to create a new collector"
-  create_response = rpc("addAgent", {"autogen" => "true", "description" => name})
+  create_response = rpc("addAgent", {"autogen" => "true", "description" => identifier})
   if @debug
     puts create_response
   end
@@ -81,7 +81,8 @@ end
 # Checks for the existance of a collector
 # with description field == desc
 # Returns a collector object or nil
-def get_collector(name)
+def get_collector(identifier)
+  hostname = `hostname -f`.strip
   collector = nil
   collector_list_json = rpc("getAgents", {})
   if @debug
@@ -93,9 +94,14 @@ def get_collector(name)
       puts "List of existing collectors successfully retrieved"
     end
     collector_list["data"].each do |c|
-      if c["description"].eql?(name)
+      if c["description"].downcase.eql?(identifier.downcase) or
+          c["description"].downcase.eql?(hostname.downcase)
         if @debug
-          puts "Found collector with name matching #{name}"
+            if c["description"].downcase.eql?(identifier.downcase)
+                puts "Found collector with description matching #{identifier}"
+            elsif c["description"].eql?(hostname)
+                puts "Found collector with hostname matching #{hostname}"
+            end
         end
         collector = c
       end
@@ -140,7 +146,6 @@ def download_install_file(action, args={})
   username = @user
   password = @password
   url = "https://#{company}.logicmonitor.com/santaba/do/#{action}?"
-  first_arg = true
   args.each_pair do |key, value|
     url << "#{key}=#{value}&"
   end
@@ -155,6 +160,7 @@ def download_install_file(action, args={})
     return response.body
   rescue SocketError => se
     puts "There was an issue communicating with #{url}. Please make sure everything is correct and try again."
+    puts se.message
   rescue Error => e
     puts "There was an issue."
     puts e.message
@@ -167,7 +173,7 @@ def install_collector(install_dir, file_name)
   puts "Installing LogicMonitor collector"
   install_file = install_dir + file_name
   puts install_file
-  File.chmod(0755, install_file) 
+  File.chmod(0755, install_file)
   execution = `cd #{install_dir}; .#{file_name} -y`
   puts execution.to_s
 end
@@ -198,14 +204,13 @@ end
 
 
 # Wrapper function for building LogicMonitor API URL's
-# and executing the associated RPCs 
+# and executing the associated RPCs
 # returns a JSON string (the response from the LogicMonitor API) or nil
 def rpc(action, args={})
   company = @company
   username = @user
   password =  @password
   url = "https://#{company}.logicmonitor.com/santaba/rpc/#{action}?"
-  first_arg = true
   args.each_pair do |key, value|
     url << "#{key}=#{value}&"
   end
@@ -219,8 +224,8 @@ def rpc(action, args={})
     response = http.request(req)
     return response.body
   rescue SocketError => se
-    puts "There was an issue communicating with #{url}. Please make sure everything is correct and try again."
-    puts "Exiting"
+    puts "There was an issue communicating with #{url}. Please make sure everything is correct and try again. Exiting"
+    puts se.message
     exit 3
   rescue Error => e
     puts "There was an issue."
@@ -236,7 +241,7 @@ opt_error = false
 begin
   @options = {}
   OptionParser.new do |opts|
-    opts.banner = "Usage: add_collector.rb -c <company> -u <user> -p <password> [-d]"
+    opts.banner = "Usage: add_collector.rb -c <company> -u <user> -p <password> [-D collector description] [-d]"
 
     opts.on("-d", "--debug", "Turn on debug print statements") do |v|
       @options[:debug] = v
@@ -253,32 +258,36 @@ begin
     opts.on("-p", "--password PASSWORD", "LogicMonitor password") do |p|
       @options[:password] = p
     end
+
+    opts.on("-D", "--description DESCRIPTION", "Collector description") do |d|
+      @options[:description] = d
+    end
   end.parse!
 rescue OptionParser::MissingArgument => ma
    puts ma.inspect
    opt_error = true
-end  
+end
 
 begin
   raise OptionParser::MissingArgument if @options[:company].nil?
 rescue  OptionParser::MissingArgument => ma
   puts "Missing option: -c <company>"
    opt_error = true
-end  
+end
 
 begin
   raise OptionParser::MissingArgument if @options[:user].nil?
 rescue  OptionParser::MissingArgument => ma
   puts "Missing option: -u <username>"
   opt_error = true
-end  
+end
 
 begin
   raise OptionParser::MissingArgument if @options[:password].nil?
 rescue  OptionParser::MissingArgument => ma
   puts "Missing option: -p <password>"
   opt_error = true
-end  
+end
 
 if opt_error
   exit 1
@@ -291,5 +300,11 @@ end
 @debug = @options[:debug]
 @install_dir = "/usr/local/logicmonitor"
 
+if @options[:description].nil?
+    @identifier = @name = `hostname -f`.strip
+else
+    @identifier = @options[:description]
+end
+
 # Execute the run function.
-run(@name, @install_dir)
+run(@identifier, @install_dir)
